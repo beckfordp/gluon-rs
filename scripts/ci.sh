@@ -2,40 +2,20 @@
 # SPDX-License-Identifier: MIT
 # CI for gluon-rs, defined once: the sandbox runs this script directly and
 # GitHub Actions will call it. Stops at the first failing step; each step
-# announces itself with a "== " line.
+# announces itself with a "== " line. The steps are scripts/lib/ci.sh's, which
+# the Rust services' CI runs too.
+# shellcheck source-path=SCRIPTDIR
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
+# shellcheck source=lib/ci.sh
+. scripts/lib/ci.sh
 
-step() { echo "== $*"; }
+# Indented: its own "== " and SKIP lines aren't CI's.
+step "script library tests"
+scripts/test-lib.sh | sed 's/^/     /'
 
-step "cargo fmt --check"
-cargo fmt --all --check
-
-step "cargo clippy (warnings are errors)"
-cargo clippy --workspace --all-targets --locked -- -D warnings
-
-# Runs the tests once, instrumented; fails below 80% of lines (workflow.md).
-# cargo-llvm-cov 0.9.1 exits 1 below the gate without a word, so say why here.
-step "tests with coverage (lines >= 80%)"
-coverage_log="$(mktemp)"
-trap 'rm -f "$coverage_log"' EXIT
-if ! cargo llvm-cov --workspace --locked --fail-under-lines 80 --summary-only 2>&1 \
-  | tee "$coverage_log"; then
-  if ! grep -q "test result: FAILED" "$coverage_log"; then
-    lines="$(awk '/^TOTAL/ {print $(NF-3)}' "$coverage_log")"
-    echo "FAIL coverage: ${lines:-an unknown share} of lines covered, below the 80% gate"
-  fi
-  exit 1
-fi
-
-# The RustSec advisory database lives on GitHub, which the sandbox can't
-# reach (gluon plans/private/sandbox.md): say so rather than pass silently.
-step "cargo audit"
-advisory_db="https://github.com/rustsec/advisory-db"
-if ! timeout 20 git ls-remote --exit-code "$advisory_db" HEAD > /dev/null 2>&1; then
-  echo "SKIP cargo-audit: advisory database unreachable ($advisory_db)"
-elif ! command -v cargo-audit > /dev/null 2>&1; then
-  echo "SKIP cargo-audit: not installed (GitHub Actions installs it)"
-else
-  cargo audit --deny warnings
-fi
+ci_fmt
+ci_clippy
+ci_coverage
+# shellcheck disable=SC2119 # no lockfile-only crates here
+ci_audit
