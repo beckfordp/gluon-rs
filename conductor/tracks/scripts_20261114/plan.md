@@ -6,4 +6,4 @@
           return (also under `$(…)`), owner_of, step, ci_audit's SKIP,
           verify.sh's ok/bad/expect counts
     - [x] Green: the library; gluon-rs `scripts/ci.sh` on it
-- [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
