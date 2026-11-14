@@ -26,3 +26,8 @@ shares: the script library's tests (`scripts/test-lib.sh`), fmt, clippy,
 cargo-llvm-cov (at least 80% of lines), cargo audit (skipped when the advisory
 database is unreachable). `scripts/lib/` (`ci.sh`, `verify.sh`, `portable.sh`)
 runs on Linux and macOS (bash 3.2, BSD tools, no coreutils `timeout`).
+
+A Linux test bed for the laptop: `scripts/on-linux.sh REPO_PATH COMMAND…`
+runs any Rust repo's script on Linux in Docker (`scripts/linux-bed/Dockerfile`:
+rust:1.99.1-bookworm, PostgreSQL 16, cargo-llvm-cov, cargo-audit) against a
+copy of gluon's layout; the host's repos are only read. CI never needs it.
