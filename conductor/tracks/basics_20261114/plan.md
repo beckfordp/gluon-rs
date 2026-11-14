@@ -20,7 +20,7 @@ comes first.
     - [x] Red: connect and ping ok; `Timeout` while paused; a wrong address
           fails at connect
     - [x] Green
-- [ ] Task: `environment`, `runtime`, `shutdown` (shutdown tested through the
+- [x] Task: `environment`, `runtime`, `shutdown` bf00f09 (shutdown tested through the
       fixture binary in Phase 2)
 - [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
