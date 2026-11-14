@@ -124,7 +124,8 @@ impl Service {
     }
 
     /// `POST path` with `body` and an optional `Content-Type`: status, Content-Type, body.
-    #[must_use]
+    // Often sent only for its effect (a span, a metric), so not `must_use`.
+    #[allow(clippy::must_use_candidate)]
     pub fn post(
         &self,
         path: &str,
@@ -150,13 +151,15 @@ impl Service {
     }
 
     /// `POST path` with a JSON body.
-    #[must_use]
+    // Often sent only for its effect (a span, a metric), so not `must_use`.
+    #[allow(clippy::must_use_candidate)]
     pub fn post_json(&self, path: &str, json: &str) -> (u16, Option<String>, String) {
         self.post(path, json.as_bytes(), Some("application/json"))
     }
 
     /// Any request without a body: status, all headers (lower-case names), body.
-    #[must_use]
+    // Often sent only for its effect (a span, a metric), so not `must_use`.
+    #[allow(clippy::must_use_candidate)]
     pub fn request(
         &self,
         method: &str,
@@ -168,7 +171,8 @@ impl Service {
 
     /// Any request: method, path, headers, body → status, all headers (lower-case names), body.
     /// Redirects are returned, not followed.
-    #[must_use]
+    // Often sent only for its effect (a span, a metric), so not `must_use`.
+    #[allow(clippy::must_use_candidate)]
     pub fn request_with_body(
         &self,
         method: &str,
