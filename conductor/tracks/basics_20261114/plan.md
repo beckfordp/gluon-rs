@@ -11,11 +11,11 @@ comes first.
     - [x] Red: bad ports all reported with today's wording; Postgres defaults
           and overrides; `ConfigError`'s Display
     - [x] Green
-- [ ] Task: `text_error` and `health`
-    - [ ] Red: `oneshot` against a fake `Readiness`: 200 empty with no
+- [x] Task: `text_error` and `health` 8640783
+    - [x] Red: `oneshot` against a fake `Readiness`: 200 empty with no
           Content-Type, ready 200/503, HEAD 405, unknown 404, the text
           headers
-    - [ ] Green
+    - [x] Green
 - [ ] Task: `postgres`
     - [ ] Red: connect and ping ok; `Timeout` while paused; a wrong address
           fails at connect
