@@ -10,7 +10,11 @@
 # into the volume gluon-rs-linux-bed-work (lib/gluon-rs, registry, REPO_PATH;
 # no target/ or .git), whose target/ dirs stay between runs. Cargo's downloads
 # stay in gluon-rs-linux-bed-cargo. The image is built when its Dockerfile
-# (scripts/linux-bed/) changes. COMMAND's exit status is this script's.
+# (scripts/linux-bed/) changes. COMMAND's exit status is this script's
+# (125-127 can also be docker's own). Runs queue, one at a time, since they
+# share the volume. The copies have no .git: a script that reads git history
+# doesn't run here. GLUON overrides where gluon is (default: the one holding
+# lib/gluon-rs).
 set -euo pipefail
 if [ $# -lt 2 ]; then
   echo "usage: $0 REPO_PATH COMMAND..." >&2
@@ -39,7 +43,7 @@ exec docker run --rm -i ${tty:+"$tty"} \
   -v gluon-rs-linux-bed-work:/work \
   -v gluon-rs-linux-bed-cargo:/home/tester/.cargo \
   -e REPO="$repo" \
-  "$image" bash -c '
+  "$image" flock /work/.bed.lock bash -c '
     set -e
     for path in lib/gluon-rs registry "$REPO"; do
       mkdir -p "/work/$path"

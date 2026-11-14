@@ -29,7 +29,17 @@ echo "== 2. the exit status passes through =="
 scripts/on-linux.sh lib/gluon-rs sh -c 'exit 3' > /dev/null 2>&1
 expect "exit 3" 3 "$?"
 
-echo "== 3. the host's repos are untouched =="
+echo "== 3. runs queue: they share the volume =="
+scripts/on-linux.sh lib/gluon-rs sleep 4 > /dev/null 2>&1 &
+first=$!
+sleep 1
+start=$SECONDS
+scripts/on-linux.sh lib/gluon-rs true > /dev/null 2>&1
+waited=$((SECONDS - start))
+wait "$first"
+if [ "$waited" -ge 2 ]; then ok "a second run waited for the first (${waited} s)"; else bad "a second run ran alongside the first (${waited} s)"; fi
+
+echo "== 4. the host's repos are untouched =="
 expect "gluon-rs and gluon's registry unchanged" "$before" "$(host_state)"
 
 verify_summary "the Linux test bed"
