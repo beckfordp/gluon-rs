@@ -7,7 +7,6 @@
 use std::net::{Ipv4Addr, SocketAddr};
 use std::process::ExitCode;
 
-use axum::Router;
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{post, put};
@@ -55,7 +54,7 @@ fn main() -> ExitCode {
             .method_not_allowed_fallback(method_not_allowed)
             .fallback(not_found)
             .with_state(Up);
-        let served = axum::serve(listener, Router::into_make_service(app))
+        let served = axum::serve(listener, app)
             .with_graceful_shutdown(shutdown::signal("fixture"))
             .await;
         eprintln!("fixture: stopping");

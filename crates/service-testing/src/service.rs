@@ -240,8 +240,11 @@ impl Service {
 impl Drop for Service {
     fn drop(&mut self) {
         if self.child.try_wait().ok().flatten().is_none() {
-            self.terminate();
-            let _ = self.wait_exit();
+            // No asserts: a panic while unwinding would abort and hide the test's own failure.
+            let _ = Command::new("kill")
+                .args(["-TERM", &self.child.id().to_string()])
+                .status();
+            let _ = self.child.wait();
         }
     }
 }
