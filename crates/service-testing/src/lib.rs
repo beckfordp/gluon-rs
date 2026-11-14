@@ -15,8 +15,10 @@
 )]
 
 mod postgres;
+mod service;
 
 pub use postgres::Postgres;
+pub use service::Service;
 
 use std::net::TcpListener;
 
