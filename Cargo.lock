@@ -1061,6 +1061,7 @@ dependencies = [
  "axum",
  "service-testing",
  "sqlx",
+ "thiserror",
  "tokio",
  "tower",
 ]
