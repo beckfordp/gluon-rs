@@ -1,0 +1,4 @@
+// SPDX-License-Identifier: MIT
+
+//! What every Rust port of a gluon service needs at runtime (gluon TD-43):
+//! the pieces user-service-rs and notification-service-rs both had a copy of.
