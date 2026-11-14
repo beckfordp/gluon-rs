@@ -16,10 +16,10 @@ comes first.
           Content-Type, ready 200/503, HEAD 405, unknown 404, the text
           headers
     - [x] Green
-- [ ] Task: `postgres`
-    - [ ] Red: connect and ping ok; `Timeout` while paused; a wrong address
+- [x] Task: `postgres` b5da79e
+    - [x] Red: connect and ping ok; `Timeout` while paused; a wrong address
           fails at connect
-    - [ ] Green
+    - [x] Green
 - [ ] Task: `environment`, `runtime`, `shutdown` (shutdown tested through the
       fixture binary in Phase 2)
 - [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
