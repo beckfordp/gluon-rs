@@ -4,6 +4,9 @@
 //! the pieces user-service-rs and notification-service-rs both had a copy of.
 
 pub mod config;
+pub mod environment;
 pub mod health;
 pub mod postgres;
+pub mod runtime;
+pub mod shutdown;
 pub mod text_error;
