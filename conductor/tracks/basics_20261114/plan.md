@@ -30,3 +30,6 @@ comes first.
           wait_exit; the request helpers
     - [x] Green
 - [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions 3e6a153
