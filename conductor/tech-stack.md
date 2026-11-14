@@ -10,7 +10,9 @@ GitHub in the sandbox).
   `pedantic`, `unwrap_used`/`expect_used`/`panic` denied outside tests.
 
 ## Crates
-- `service-basics`: tokio, axum 0.8, sqlx 0.8 (postgres, runtime-tokio).
+- `service-basics`: tokio, axum 0.8, sqlx 0.8 (postgres, runtime-tokio),
+  thiserror 2. Its `fixture` binary (`src/bin/fixture.rs`) is a minimal
+  service for service-testing's tests; consumers never build it.
 - `service-testing`: tempfile, ureq 3. A test helper: panics allowed
   crate-wide, as in the services' test support.
 
