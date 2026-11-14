@@ -21,5 +21,8 @@ Path dependencies from `services/<name>-rs`; gluon `bin/k8s-local-up` passes
 this repo to `docker build` as a named build context.
 
 ## CI
-`scripts/ci.sh`: fmt, clippy, cargo-llvm-cov (at least 80% of lines), cargo
-audit (skipped when the advisory database is unreachable).
+`scripts/ci.sh` runs `scripts/lib/ci.sh`'s steps, which the Rust services' CI
+shares: the script library's tests (`scripts/test-lib.sh`), fmt, clippy,
+cargo-llvm-cov (at least 80% of lines), cargo audit (skipped when the advisory
+database is unreachable). `scripts/lib/` (`ci.sh`, `verify.sh`, `portable.sh`)
+runs on Linux and macOS (bash 3.2, BSD tools, no coreutils `timeout`).
