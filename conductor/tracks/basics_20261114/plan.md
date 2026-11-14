@@ -22,7 +22,7 @@ comes first.
     - [x] Green
 - [x] Task: `environment`, `runtime`, `shutdown` bf00f09 (shutdown tested through the
       fixture binary in Phase 2)
-- [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: service-testing's Service
 - [ ] Task: `Service` and a fixture binary on service-basics
