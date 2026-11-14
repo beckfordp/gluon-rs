@@ -3,7 +3,7 @@
 `service-basics`' Postgres tests use `service-testing`'s cluster, so that
 comes first.
 
-## Phase 1: service-basics
+## Phase 1: service-basics [checkpoint: c0c4929]
 - [x] Task: `service-testing::Postgres` and `free_port` 8e448c0
     - [x] Red: start, query, stop, start_again, pause, resume, pg_dump
     - [x] Green: lifted from the services' `tests/support`
