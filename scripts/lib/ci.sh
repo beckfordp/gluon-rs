@@ -52,9 +52,10 @@ ci_audit() {
     echo "SKIP cargo-audit: not installed (GitHub Actions installs it)"
     return 0
   fi
-  local crate
+  local crate tree
   for crate in "$@"; do
-    if [ -n "$(cargo tree -i "$crate" -e all --target all --locked -q)" ]; then
+    tree="$(cargo tree -i "$crate" -e all --target all --locked -q)" || return 1
+    if [ -n "$tree" ]; then
       echo "FAIL $crate is built: drop its .cargo/audit.toml ignore"
       return 1
     fi

@@ -26,7 +26,7 @@ with_timeout() {
   local watchdog=$!
   local status=0 timed_out=0
   wait "$pid" 2> /dev/null || status=$? # quiet: bash reports a stopped job
-  kill "$watchdog" 2> /dev/null
+  kill "$watchdog" 2> /dev/null || true # gone already when it timed out
   wait "$watchdog" || timed_out=$?
   [ "$timed_out" = 124 ] && status=124
   return "$status"

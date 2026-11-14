@@ -28,6 +28,8 @@ start=$SECONDS
 out="$(with_timeout 10 echo hi)"
 expect "the command's output" hi "$out"
 within "returns when the command ends" 2
+bash -ec '. scripts/lib/portable.sh; with_timeout 1 sleep 10'
+expect "124 under set -e too" 124 "$?"
 
 echo "== owner_of =="
 expect "the owner of the repo" "$(id -un)" "$(owner_of "$PWD")"
@@ -39,6 +41,17 @@ echo "== ci_audit =="
 # shellcheck disable=SC2119 # no lockfile-only crates
 out="$(CI_ADVISORY_DB=http://127.0.0.1:9/advisory-db ci_audit 2>&1)"
 expect "says why it skipped" $'== cargo audit\nSKIP cargo-audit: advisory database unreachable (http://127.0.0.1:9/advisory-db)' "$out"
+# A crate cargo tree can't find fails the step rather than passing it.
+stand_ins="$(mktemp -d)"
+printf '#!/bin/sh\n' > "$stand_ins/cargo-audit"
+chmod +x "$stand_ins/cargo-audit"
+cargo() { if [ "$1" = tree ]; then return 101; fi; }
+# shellcheck disable=SC2329 # called through with_timeout
+git() { return 0; }
+out="$(PATH="$stand_ins:$PATH" && set -e && ci_audit no-such-crate 2>&1)"
+expect "fails when cargo tree does" 1 "$?"
+unset -f cargo git
+rm -rf "$stand_ins"
 
 echo "== verify.sh's counts =="
 counts="$(
