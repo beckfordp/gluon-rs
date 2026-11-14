@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: MIT
+# gluon-rs: what every Rust port of a gluon service shares (gluon TD-43), as
+# purerest is for the Scala services. Services depend on it by path.
+[workspace]
+resolver = "3"
+members = ["crates/service-basics", "crates/service-testing"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+rust-version = "1.99"
+publish = false
+
+# Every member opts in with `[lints] workspace = true` (conductor/tech-stack.md).
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# conductor/code_styleguides/rust.md rule 2: no panicking shortcuts outside tests
+# (clippy.toml allows them in tests).
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
