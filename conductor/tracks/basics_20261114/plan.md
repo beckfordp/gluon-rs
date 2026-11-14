@@ -4,9 +4,9 @@
 comes first.
 
 ## Phase 1: service-basics
-- [ ] Task: `service-testing::Postgres` and `free_port`
-    - [ ] Red: start, query, stop, start_again, pause, resume, pg_dump
-    - [ ] Green: lifted from the services' `tests/support`
+- [x] Task: `service-testing::Postgres` and `free_port` 8e448c0
+    - [x] Red: start, query, stop, start_again, pause, resume, pg_dump
+    - [x] Green: lifted from the services' `tests/support`
 - [ ] Task: `config`
     - [ ] Red: bad ports all reported with today's wording; Postgres defaults
           and overrides; `ConfigError`'s Display
