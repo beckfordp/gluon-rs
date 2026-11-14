@@ -29,4 +29,4 @@ comes first.
     - [x] Red: start waits for `/health`; stdout and stderr; SIGTERM exits 0;
           wait_exit; the request helpers
     - [x] Green
-- [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
