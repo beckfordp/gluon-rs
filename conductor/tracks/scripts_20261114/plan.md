@@ -7,3 +7,6 @@
           verify.sh's ok/bad/expect counts
     - [x] Green: the library; gluon-rs `scripts/ci.sh` on it
 - [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions a2aefa1
