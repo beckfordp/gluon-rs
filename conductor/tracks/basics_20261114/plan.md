@@ -7,10 +7,10 @@ comes first.
 - [x] Task: `service-testing::Postgres` and `free_port` 8e448c0
     - [x] Red: start, query, stop, start_again, pause, resume, pg_dump
     - [x] Green: lifted from the services' `tests/support`
-- [ ] Task: `config`
-    - [ ] Red: bad ports all reported with today's wording; Postgres defaults
+- [x] Task: `config` 86b1ac7
+    - [x] Red: bad ports all reported with today's wording; Postgres defaults
           and overrides; `ConfigError`'s Display
-    - [ ] Green
+    - [x] Green
 - [ ] Task: `text_error` and `health`
     - [ ] Red: `oneshot` against a fake `Readiness`: 200 empty with no
           Content-Type, ready 200/503, HEAD 405, unknown 404, the text
