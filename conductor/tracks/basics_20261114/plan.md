@@ -25,8 +25,8 @@ comes first.
 - [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: service-testing's Service
-- [ ] Task: `Service` and a fixture binary on service-basics
-    - [ ] Red: start waits for `/health`; stdout and stderr; SIGTERM exits 0;
+- [x] Task: `Service` and a fixture binary on service-basics 9aeef52
+    - [x] Red: start waits for `/health`; stdout and stderr; SIGTERM exits 0;
           wait_exit; the request helpers
-    - [ ] Green
+    - [x] Green
 - [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
