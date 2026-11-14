@@ -18,8 +18,8 @@ use tower::ServiceExt;
 struct Fake(bool);
 
 impl Readiness for Fake {
-    async fn ready(&self) -> bool {
-        self.0
+    fn ready(&self) -> impl Future<Output = bool> + Send {
+        std::future::ready(self.0)
     }
 }
 
