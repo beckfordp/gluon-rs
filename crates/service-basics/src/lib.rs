@@ -6,6 +6,7 @@
 pub mod config;
 pub mod environment;
 pub mod health;
+pub mod jvm;
 pub mod postgres;
 pub mod runtime;
 pub mod shutdown;

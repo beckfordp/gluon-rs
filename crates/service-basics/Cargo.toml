@@ -2,7 +2,7 @@
 
 [package]
 name = "service-basics"
-description = "What every Rust port of a gluon service needs at runtime: environment, shutdown, config, Postgres, plain-text errors, health."
+description = "What every Rust port of a gluon service needs at runtime: environment, shutdown, config, Postgres, plain-text errors, health, JVM wire formats."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -16,8 +16,10 @@ workspace = true
 axum = "0.8"
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres"] }
 thiserror = "2"
+time = "0.3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "sync", "time"] }
 
 [dev-dependencies]
 service-testing = { path = "../service-testing" }
+time = { version = "0.3", features = ["macros"] }
 tower = { version = "0.5", features = ["util"] }

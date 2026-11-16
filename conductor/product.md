@@ -13,7 +13,8 @@ sections.
 ## Purpose
 - `service-basics`: environment, runtime, shutdown, config (ports, Postgres,
   `ConfigError`), the Postgres pool and bounded ping, tapir's plain-text
-  errors, `/health` and `/health/ready`.
+  errors, `/health` and `/health/ready`, and values as the JVM prints them
+  (`jvm::java_instant`, both ports' JSON; gluon RPN-5).
 - `service-testing`: a throwaway PostgreSQL cluster from the local binaries;
   the service binary under test.
 - Later: `telemetry` (RPN-7), the Kafka consumer pieces (RPN-8).
