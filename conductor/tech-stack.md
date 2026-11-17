@@ -21,6 +21,11 @@ GitHub in the sandbox).
   opentelemetry 0.33 (OTLP/HTTP), schemars 1. `scripts/vendor-swagger-ui.sh`
   refreshes its Swagger UI assets, `scripts/java-uuid-vectors.sh` its JDK
   UUID vectors.
+- `kafka-event-consumer`: purekafka's consumer side without a Kafka client —
+  envelope routing (`Routes`, `handle_record`), the DLQ guard, the stream
+  supervisor, event age and lag, the consume span. The caller's loop owns
+  the broker (rdkafka), offsets and the DLQ publisher. Moved from
+  user-service-rs's events-probe *(2026-11-17, gluon RPN-8)*.
 
 ## Consumers
 Path dependencies from `services/<name>-rs`; gluon `bin/k8s-local-up` passes

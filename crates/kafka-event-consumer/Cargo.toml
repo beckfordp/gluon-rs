@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: MIT
+
+[package]
+name = "kafka-event-consumer"
+description = "The consumer side every Rust port's Kafka consumers share, as purekafka's: envelope routing, the DLQ guard, the stream supervisor, event age, lag and the consume span (gluon RPN-8)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+telemetry = { path = "../telemetry" }
+opentelemetry = { version = "0.33", default-features = false, features = ["trace"] }
+opentelemetry_sdk = { version = "0.33", default-features = false, features = ["trace"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "sync", "time"] }
+
+[dev-dependencies]
+opentelemetry_sdk = { version = "0.33", default-features = false, features = ["trace", "testing"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
