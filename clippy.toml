@@ -3,5 +3,5 @@
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 allow-panic-in-tests = true
-# Proper nouns the docs use.
-doc-valid-idents = ["PostgreSQL", ".."]
+# Proper nouns the docs use (OTel is OpenTelemetry's short name).
+doc-valid-idents = ["OTel", "OpenTelemetry", "OpenAPI", "AsyncAPI", "PostgreSQL", ".."]

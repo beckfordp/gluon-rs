@@ -3,7 +3,7 @@
 # purerest is for the Scala services. Services depend on it by path.
 [workspace]
 resolver = "3"
-members = ["crates/service-basics", "crates/service-testing"]
+members = ["crates/service-basics", "crates/service-testing", "crates/telemetry"]
 
 [workspace.package]
 version = "0.1.0"

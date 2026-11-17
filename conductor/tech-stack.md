@@ -15,6 +15,12 @@ GitHub in the sandbox).
   service for service-testing's tests; consumers never build it.
 - `service-testing`: tempfile, ureq 3. A test helper: panics allowed
   crate-wide, as in the services' test support.
+- `telemetry`: tracing middleware, metrics, log format, error envelope, the
+  docs routes (OpenAPI, Swagger UI, AsyncAPI); the seed of a Rust purerest
+  equivalent. Moved from user-service-rs *(2026-11-17, gluon RPN-7)*;
+  opentelemetry 0.33 (OTLP/HTTP), schemars 1. `scripts/vendor-swagger-ui.sh`
+  refreshes its Swagger UI assets, `scripts/java-uuid-vectors.sh` its JDK
+  UUID vectors.
 
 ## Consumers
 Path dependencies from `services/<name>-rs`; gluon `bin/k8s-local-up` passes
