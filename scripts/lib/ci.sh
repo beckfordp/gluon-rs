@@ -20,13 +20,16 @@ ci_clippy() {
   cargo clippy --workspace --all-targets --locked -- -D warnings
 }
 
-# Runs the tests once, instrumented; fails below 80% of lines (workflow.md).
+# ci_coverage [IGNORE_REGEX]: runs the tests once, instrumented; fails below
+# 80% of lines (workflow.md). Files matching IGNORE_REGEX aren't measured: for
+# code only another suite runs (the caller says which and why).
 # cargo-llvm-cov 0.9.1 exits 1 below the gate without a word, so say why here.
 ci_coverage() {
   step "tests with coverage (lines >= 80%)"
-  local log status=0
+  local log status=0 ignore=()
+  if [ -n "${1:-}" ]; then ignore=(--ignore-filename-regex "$1"); fi
   log="$(mktemp)"
-  cargo llvm-cov --workspace --locked --fail-under-lines 80 --summary-only 2>&1 \
+  cargo llvm-cov --workspace --locked --fail-under-lines 80 --summary-only ${ignore[@]+"${ignore[@]}"} 2>&1 \
     | tee "$log" || status=$?
   if [ "$status" != 0 ] && ! grep -q "test result: FAILED" "$log"; then
     local lines

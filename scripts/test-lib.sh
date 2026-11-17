@@ -53,6 +53,16 @@ expect "fails when cargo tree does" 1 "$?"
 unset -f cargo git
 rm -rf "$stand_ins"
 
+echo "== ci_coverage =="
+# A stand-in cargo prints its arguments: the pattern reaches llvm-cov, or nothing does.
+cargo() { echo "args: $*"; }
+# shellcheck disable=SC2119 # no pattern: everything measured
+out="$(ci_coverage 2>&1)"
+expect "no pattern, no ignore flag" "" "$(grep -o -- '--ignore-filename-regex.*' <<< "$out")"
+out="$(ci_coverage 'probe/src/(main|run)\.rs' 2>&1)"
+expect "the pattern passed on" "--ignore-filename-regex probe/src/(main|run)\.rs" "$(grep -o -- '--ignore-filename-regex.*' <<< "$out")"
+unset -f cargo
+
 echo "== verify.sh's counts =="
 counts="$(
   VERIFY_PASSED=0 VERIFY_FAILED=0
