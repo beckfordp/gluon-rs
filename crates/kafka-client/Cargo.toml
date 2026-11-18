@@ -16,7 +16,7 @@ workspace = true
 kafka-event-consumer = { path = "../kafka-event-consumer" }
 telemetry = { path = "../telemetry" }
 opentelemetry = { version = "0.33", default-features = false, features = ["trace"] }
-rdkafka = { version = "0.39", default-features = false, features = ["libz", "tokio"] }
+rdkafka = { version = "0.39", default-features = false, features = ["tokio"] }
 tokio = { version = "1", features = ["macros", "sync"] }
 
 [dev-dependencies]
