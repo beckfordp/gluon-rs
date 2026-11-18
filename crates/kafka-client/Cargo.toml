@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT
+
+[package]
+name = "kafka-client"
+description = "The Kafka client side every Rust port's consumers share (rdkafka): the consume loop, the dead-letter publisher and the lag statistics context; moved from user-service-rs's events-probe (gluon TD-S5)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kafka-event-consumer = { path = "../kafka-event-consumer" }
+telemetry = { path = "../telemetry" }
+opentelemetry = { version = "0.33", default-features = false, features = ["trace"] }
+rdkafka = { version = "0.39", default-features = false, features = ["libz", "tokio"] }
+tokio = { version = "1", features = ["macros", "sync"] }
+
+[dev-dependencies]
+opentelemetry_sdk = { version = "0.33", default-features = false, features = ["trace", "testing"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

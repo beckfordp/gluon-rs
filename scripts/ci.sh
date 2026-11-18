@@ -16,6 +16,9 @@ scripts/test-lib.sh | sed 's/^/     /'
 
 ci_fmt
 ci_clippy
-ci_coverage
+# kafka-client's consume loop needs a broker, which CI hasn't: the contract
+# harness runs it (user-service's probe group, notification-service's consumer
+# groups). Everything else in the crate is measured.
+ci_coverage 'kafka-client/src/stream\.rs'
 # shellcheck disable=SC2119 # no lockfile-only crates here
 ci_audit

@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: MIT
+
+//! One consumer: what it needs, and what it does with each record. The loop
+//! that feeds it records from the broker is [`EventConsumer::consume`].
+
+use opentelemetry::context::FutureExt;
+use opentelemetry::trace::TraceContextExt;
+use telemetry::logging::Logger;
+use telemetry::metrics::Metrics;
+use telemetry::tracing::SdkTracer;
+
+use kafka_event_consumer::dead_letter::{DeadLetter, Publish};
+use kafka_event_consumer::envelope::{Routes, handle_record};
+use kafka_event_consumer::span::consumer_span;
+
+use crate::settings::ConsumerSettings;
+
+/// A consumer: its settings, telemetry, routes and DLQ guard.
+pub struct EventConsumer<R, P> {
+    /// Broker, group, topic, lag interval.
+    pub settings: ConsumerSettings,
+    /// Spans.
+    pub tracer: SdkTracer,
+    /// JSON log lines.
+    pub logger: Logger,
+    /// Where metrics go.
+    pub metrics: Metrics,
+    /// What the consumer does with each event type.
+    pub routes: R,
+    /// The DLQ guard.
+    pub dead_letter: DeadLetter<P>,
+}
+
+impl<R: Routes, P: Publish + Sync> EventConsumer<R, P> {
+    /// Handles one record inside its "<topic> process" span (gluon-rs
+    /// `kafka-event-consumer`'s `handle_record`: a null value or unrelated type
+    /// is skipped; anything that fails, poison included, is retried and then
+    /// dead-lettered raw).
+    ///
+    /// # Errors
+    /// Only when dead-lettering failed too: the stream must restart.
+    pub async fn process(
+        &self,
+        topic: &str,
+        key: Option<&str>,
+        value: Option<&str>,
+        headers: &[(String, String)],
+    ) -> Result<(), String> {
+        let cx = consumer_span(&self.tracer, headers, topic);
+        let result = handle_record(
+            topic,
+            key,
+            value,
+            &self.routes,
+            &self.logger,
+            &self.dead_letter,
+        )
+        .with_context(cx.clone())
+        .await;
+        cx.span().end();
+        result
+    }
+}
