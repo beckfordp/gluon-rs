@@ -1,8 +1,8 @@
 {
   "track_id": "http-edge-td52_20261119",
   "type": "refactor",
-  "status": "in_progress",
+  "status": "completed",
   "created_at": "2026-11-19T22:45:00Z",
-  "updated_at": "2026-11-19T22:45:00Z",
+  "updated_at": "2026-11-19T23:50:00Z",
   "description": "gluon TD-52.3: one Scala-faithful CORS policy and tapir's Allow-less 405 in service-basics, used by both ports. All-Rust sandbox prep P2."
 }

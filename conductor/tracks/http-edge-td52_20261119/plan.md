@@ -18,7 +18,15 @@ Spec: [spec.md](./spec.md).
 
 ## Phase 2: Adoption and regression
 
-- [ ] Task 2.1: notification-service-rs adopts (its own track `http-edge-td52_20261119`)
-- [ ] Task 2.2: user-service-rs adopts (its own track `http-edge-td52_20261119`)
-- [ ] Task 2.3: gluon `bin/verify-port` both; TD-52.3 ticked
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Adoption and regression' (Protocol in workflow.md)
+- [x] Task 2.1: notification-service-rs adopts (its own track `http-edge-td52_20261119`) — `5674540`, 38/38
+- [x] Task 2.2: user-service-rs adopts (its own track `http-edge-td52_20261119`) — `0b1bb15`, 128/128
+- [x] Task 2.3: gluon `bin/verify-port` both; TD-52.3 ticked
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Adoption and regression' (Protocol in workflow.md)
+      — `scripts/verify-td52.sh 2`: PASS (prompting off)
+
+## Archive (2026-11-19)
+
+TD-52.3 done: `service_basics::cors` (`CorsPolicy`, `cors`, `Unrouted`), `text_error::without_allow`,
+`edge::edge` wrapping the finished router (layering alone leaves axum's `Allow`). Both ports
+adopted (notification-service-rs `5674540`, user-service-rs `0b1bb15`); neither has CORS or
+`Allow` code. `scripts/verify-td52.sh 2` PASS; verify-port 38/38 and 128/128.
