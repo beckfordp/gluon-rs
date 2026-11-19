@@ -1,0 +1,8 @@
+{
+  "track_id": "shared-consumer-otel_20261118",
+  "type": "refactor",
+  "status": "archived",
+  "created_at": "2026-11-18T16:25:00Z",
+  "updated_at": "2026-11-18T17:00:00Z",
+  "description": "One supervised-consumer helper (kafka-client) and one OTEL reader (telemetry), adopted by notification-service-rs, user-service-rs and its events-probe; the copies removed (gluon TECHNICAL-DEBT.md S-1, S-2, S-5)."
+}

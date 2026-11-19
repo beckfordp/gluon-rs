@@ -25,7 +25,22 @@ GitHub in the sandbox).
   envelope routing (`Routes`, `handle_record`), the DLQ guard, the stream
   supervisor, event age and lag, the consume span. The caller's loop owns
   the broker (rdkafka), offsets and the DLQ publisher. Moved from
-  user-service-rs's events-probe *(2026-11-17, gluon RPN-8)*.
+  user-service-rs's events-probe *(2026-11-17, gluon RPN-8)*. The envelope's
+  `timestamp` is decoded as an instant (RFC 3339), so an envelope whose
+  timestamp isn't one is poison, as in Scala *(2026-11-18, RPN-11-could-fix,
+  TECHNICAL-DEBT S-3)*.
+- `kafka-client`: the client side on rdkafka 0.39 (librdkafka, built from
+  source): the consume loop (`EventConsumer`, at least once, commit after
+  handling, earliest offset for a new group), the dead-letter producer
+  (`KafkaPublisher`), the statistics context feeding the lag gauge. Moved from
+  the events-probe *(gluon TD-S5)*. `supervised::run_supervised` assembles
+  and supervises one consumer from its settings, `Resilience` (purekafka's
+  consumer-side settings; `Default` = notification-service's
+  `application.conf`) and routes *(2026-11-18, gluon RPN-11-cleanup,
+  TECHNICAL-DEBT.md S-1)*. A null-key record is dead-lettered with the key
+  `""`, as Scala's consumers do *(2026-11-18, RPN-11-could-fix, S-4)*.
+- `telemetry::config::tracing_from_env` reads the OTEL variables for every
+  service *(2026-11-18, RPN-11-cleanup, S-2)*.
 
 ## Consumers
 Path dependencies from `services/<name>-rs`; gluon `bin/k8s-local-up` passes

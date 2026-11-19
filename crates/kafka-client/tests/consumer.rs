@@ -150,3 +150,23 @@ async fn a_payload_that_does_not_decode_is_dead_lettered_raw() {
         vec![("hellos-dlq".to_owned(), Some("k".to_owned()), value)]
     );
 }
+
+#[tokio::test]
+async fn a_null_key_is_dead_lettered_with_an_empty_key() {
+    // Scala's consumers hand the guard record.key.getOrElse(""): a null-key
+    // record's dead letter has the key "", not none (gluon TECHNICAL-DEBT.md S-4).
+    let exporter = InMemorySpanExporter::default();
+    let (consumer, letters, _tracing) = consumer(&exporter);
+    consumer
+        .process("hellos", None, Some("{not json"), &[])
+        .await
+        .unwrap();
+    assert_eq!(
+        *letters.0.lock().unwrap(),
+        vec![(
+            "hellos-dlq".to_owned(),
+            Some(String::new()),
+            "{not json".to_owned()
+        )]
+    );
+}

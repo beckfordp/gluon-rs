@@ -35,7 +35,8 @@ impl<R: Routes, P: Publish + Sync> EventConsumer<R, P> {
     /// Handles one record inside its "<topic> process" span (gluon-rs
     /// `kafka-event-consumer`'s `handle_record`: a null value or unrelated type
     /// is skipped; anything that fails, poison included, is retried and then
-    /// dead-lettered raw).
+    /// dead-lettered raw). A null key is the key `""`, as Scala's consumers
+    /// hand the guard `record.key.getOrElse("")` (gluon TECHNICAL-DEBT.md S-4).
     ///
     /// # Errors
     /// Only when dead-lettering failed too: the stream must restart.
@@ -49,7 +50,7 @@ impl<R: Routes, P: Publish + Sync> EventConsumer<R, P> {
         let cx = consumer_span(&self.tracer, headers, topic);
         let result = handle_record(
             topic,
-            key,
+            Some(key.unwrap_or_default()),
             value,
             &self.routes,
             &self.logger,

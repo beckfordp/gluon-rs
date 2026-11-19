@@ -250,3 +250,63 @@ async fn a_failed_dead_letter_is_the_streams_error() {
     let run = run(&Fake::default(), publisher, None, Some("{nope")).await;
     assert!(run.result.is_err());
 }
+
+/// `envelope` with `timestamp` in place of the valid one.
+fn envelope_at(timestamp: &Value) -> String {
+    json!({
+        "eventId": "e1", "eventType": "UserRegistered", "timestamp": timestamp,
+        "source": "user-service", "correlationId": "c1", "payload": {"userId": "u1"}
+    })
+    .to_string()
+}
+
+#[tokio::test]
+async fn an_envelope_whose_timestamp_is_not_an_instant_is_poison() {
+    // Scala's EventEnvelope.timestamp is an Instant: its decoder fails, so the
+    // envelope is dead-lettered raw (gluon TECHNICAL-DEBT.md S-3).
+    for timestamp in [json!("yesterday"), json!("2026-11-09 18:43:19"), json!(42)] {
+        let routes = Fake::default();
+        let raw = envelope_at(&timestamp);
+        let run = run(&routes, Published::default(), Some("k1"), Some(&raw)).await;
+        assert_eq!(run.result, Ok(()));
+        assert_eq!(
+            run.letters,
+            [("user-events-dlq".to_owned(), Some("k1".to_owned()), raw)],
+            "{timestamp}"
+        );
+        assert_eq!(
+            messages(&run.lines),
+            ["Failed to decode user-events envelope", DLQ_LINE]
+        );
+        assert_eq!(
+            *routes.handled.lock().unwrap(),
+            Vec::<(String, String)>::new()
+        );
+    }
+}
+
+#[tokio::test]
+async fn an_instant_with_a_fraction_or_an_offset_is_a_timestamp() {
+    // As the producers write them (java.time.Instant: Z, up to nanoseconds).
+    for timestamp in [
+        "2026-11-10T12:00:00Z",
+        "2026-11-09T18:43:19.487722Z",
+        "2026-11-09T18:43:19.123456789Z",
+        "2026-11-09T19:43:19+01:00",
+    ] {
+        let routes = Fake::default();
+        let run = run(
+            &routes,
+            Published::default(),
+            Some("k1"),
+            Some(&envelope_at(&json!(timestamp))),
+        )
+        .await;
+        assert_eq!(run.result, Ok(()));
+        assert_eq!(run.letters, Vec::<Letter>::new(), "{timestamp}");
+        assert_eq!(
+            *routes.handled.lock().unwrap(),
+            [("e1".to_owned(), "u1".to_owned())]
+        );
+    }
+}

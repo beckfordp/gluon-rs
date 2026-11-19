@@ -12,6 +12,7 @@ use std::future::Future;
 use serde::Deserialize;
 use serde_json::Value;
 use telemetry::logging::Logger;
+use time::OffsetDateTime;
 
 use crate::dead_letter::{DeadLetter, Publish};
 
@@ -23,8 +24,11 @@ pub struct Envelope {
     pub event_id: String,
     /// What happened, e.g. `UserRegistered`: the routing key.
     pub event_type: String,
-    /// When, ISO-8601.
-    pub timestamp: String,
+    /// When: an instant, as Scala's `EventEnvelope` decodes it (RFC 3339, as
+    /// `java.time.Instant` writes it); an envelope whose timestamp isn't one
+    /// doesn't decode, so it is poison (gluon TECHNICAL-DEBT.md S-3).
+    #[serde(with = "time::serde::rfc3339")]
+    pub timestamp: OffsetDateTime,
     /// The producing service.
     pub source: String,
     /// Ties the event to its request.
