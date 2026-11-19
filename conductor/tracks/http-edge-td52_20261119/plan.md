@@ -4,13 +4,17 @@ Spec: [spec.md](./spec.md).
 
 ## Phase 1: service-basics
 
-- [ ] Task 1.1: `cors` module (`CorsPolicy`, `cors`, `Unrouted`, `allows`, `split_names`)
-  - [ ] Red: notification-service-rs's CORS tests on a fixture router; the exposed header
-  - [ ] Green: moved from notification-service-rs, exposure a policy parameter
-- [ ] Task 1.2: `text_error::without_allow`
-  - [ ] Red: a 405 has no `Allow`, for a layered router and a fallback service
-  - [ ] Green; `ci.sh`
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: service-basics' (Protocol in workflow.md)
+- [x] Task 1.1: `cors` module (`CorsPolicy`, `cors`, `Unrouted`, `allows`, `split_names`) `aea98c1`
+  - [x] Red: notification-service-rs's CORS tests on a fixture router; the exposed header
+  - [x] Green: moved from notification-service-rs, exposure a policy parameter
+- [x] Task 1.2: `text_error::without_allow` `aea98c1`
+  - [x] Red: a 405 has no `Allow`, for a layered router and a fallback service
+  - [x] Green; `ci.sh`
+  - Found: `Router::layer(without_allow)` leaves axum's `Allow` (it's added outside a
+    router's layers; user-service-rs's bug). So `edge::edge(routes, policy)` wraps the
+    finished router; tests run it bare and with route layers. Mutation-checked.
+- [x] Task: Conductor - User Manual Verification 'Phase 1: service-basics' (Protocol in workflow.md)
+      — `scripts/verify-td52.sh 1`: PASS (prompting off)
 
 ## Phase 2: Adoption and regression
 
