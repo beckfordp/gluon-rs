@@ -63,12 +63,21 @@ land in the services' own tracks; this plan names them.
 
 ## Phase 4: Adoption and regression
 
-- [ ] Task 4.1: notification-service-rs adopts (its own track
+- [x] Task 4.1: notification-service-rs adopts (its own track
       `kafka-client-td64_20261119`): handler error enums as `type Error`,
-      `GroupId`/`Topic` from config; `ci.sh`; 38/38
-- [ ] Task 4.2: user-service-rs and its events-probe adopt (its own track
-      `kafka-client-td64_20261119`): `ci.sh`; probe 10/10; 128/128
-- [ ] Task 4.3: Regression — gluon-rs `ci.sh`; `bin/verify-port user-service` and
+      `GroupId`/`Topic` from config; `ci.sh`; 38/38 — notification-service-rs `364c67a`
+- [x] Task 4.2: user-service-rs and its events-probe adopt (its own track
+      `kafka-client-td64_20261119`): `ci.sh`; probe 10/10; 128/128 — user-service-rs `a9edf18`
+- [x] Task 4.3: Regression — gluon-rs `ci.sh`; `bin/verify-port user-service` and
       `notification-service` pass (cluster not run on macOS); gluon
       `TECHNICAL_DEBT.md` TD-64 ticked and archived
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Adoption and regression' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Adoption and regression' (Protocol in workflow.md)
+
+## Archive (2026-11-19)
+
+TD-64.1–64.5 done: typed errors (`DeadLetterError`, `ConsumeError`, `type Error` on
+`Routes`/`Publish`), injected `Clock`, commit via `blocking::off_worker`, metrics built
+once, `GroupId`/`Topic` with `SettingsError`. `scripts/verify-td64.sh 3` PASS (93.36%).
+Adopted: notification-service-rs `364c67a` (ci 96.76%, verify-port 38/38),
+user-service-rs `a9edf18` (ci 94.38%, verify-port 128/128, probe 10/10). gluon
+TECHNICAL_DEBT.md TD-64 archived.
