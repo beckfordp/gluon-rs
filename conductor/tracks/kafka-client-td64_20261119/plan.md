@@ -44,7 +44,7 @@ land in the services' own tracks; this plan names them.
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Clock and commit' (Protocol in workflow.md)
       — `scripts/verify-td64.sh 2`: PASS (prompting off)
 
-## Phase 3: Metrics once and newtypes (TD-64.4, TD-64.5)
+## Phase 3: Metrics once and newtypes (TD-64.4, TD-64.5) `[checkpoint: 292c6ec]`
 
 - [x] Task 3.1: `ConsumerMetrics` built once `967f8ed`
   - [x] Red: `subscribe` takes the built `ConsumerMetrics` (compile-level), or a test
