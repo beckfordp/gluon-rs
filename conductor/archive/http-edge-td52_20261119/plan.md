@@ -16,7 +16,7 @@ Spec: [spec.md](./spec.md).
 - [x] Task: Conductor - User Manual Verification 'Phase 1: service-basics' (Protocol in workflow.md)
       — `scripts/verify-td52.sh 1`: PASS (prompting off)
 
-## Phase 2: Adoption and regression
+## Phase 2: Adoption and regression `[checkpoint: 470401a]`
 
 - [x] Task 2.1: notification-service-rs adopts (its own track `http-edge-td52_20261119`) — `5674540`, 38/38
 - [x] Task 2.2: user-service-rs adopts (its own track `http-edge-td52_20261119`) — `0b1bb15`, 128/128
