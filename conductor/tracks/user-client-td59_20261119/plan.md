@@ -4,11 +4,12 @@ Spec: [spec.md](./spec.md).
 
 ## Phase 1: The crate
 
-- [ ] Task 1.1: `user-client` with `UserClient` and `LookupError`
-  - [ ] Red: found, unknown (404), malformed id (400), 5xx after retries, no answer, a
+- [x] Task 1.1: `user-client` with `UserClient` and `LookupError` `94243a5`
+  - [x] Red: found, unknown (404), malformed id (400), 5xx after retries, no answer, a
         body that isn't a user; the request's path
-  - [ ] Green: moved from events-probe's `lookup.rs`; `ci.sh`
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: The crate' (Protocol in workflow.md)
+  - [x] Green: moved from events-probe's `lookup.rs`; `ci.sh`
+- [x] Task: Conductor - User Manual Verification 'Phase 1: The crate' (Protocol in workflow.md)
+      — `scripts/verify-td59.sh 1`: PASS (prompting off)
 
 ## Phase 2: Adoption and regression
 
