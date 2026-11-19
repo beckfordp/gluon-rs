@@ -6,21 +6,25 @@ land in the services' own tracks; this plan names them.
 
 ## Phase 1: Typed errors (TD-64.1, High)
 
-- [ ] Task 1.1: `kafka-event-consumer` errors
-  - [ ] Red: tests that `dead_letter` and `handle_record` return `DeadLetterError` /
+- [x] Task 1.1: `kafka-event-consumer` errors `96988b8`
+  - [x] Red: tests that `dead_letter` and `handle_record` return `DeadLetterError` /
         `HandleError` variants with a source chain (handler failure, decode failure,
         DLQ publish failed)
-  - [ ] Green: the `thiserror` enums; `Routes`, `Publish` and `decode` gain
+  - [x] Green: the `thiserror` enums; `Routes`, `Publish` and `decode` gain
         `type Error`; `supervise<E: Display>`
-  - [ ] Refactor; `ci.sh`
-- [ ] Task 1.2: `kafka-client` `ConsumeError`
-  - [ ] Red: test that `consume`'s commit and dead-letter failures map to their variants
+  - [x] Refactor; `ci.sh`
+  - Deviation: no `HandleError`. `handle_record` fails only when dead-lettering
+    does, so it returns `DeadLetterError` (`BreakerOpen`, `Publish(source)`).
+- [x] Task 1.2: `kafka-client` `ConsumeError` `96988b8` (one commit with 1.1: 1.1 alone
+      leaves `kafka-client` uncompilable)
+  - [x] Red: test that `consume`'s commit and dead-letter failures map to their variants
         (a fake consumer / commit seam where the broker isn't needed)
-  - [ ] Green: `ConsumeError` (subscribe, all brokers down, commit, dead-letter);
+  - [x] Green: `ConsumeError` (subscribe, all brokers down, commit, dead-letter);
         `KafkaPublisher`'s `Publish::Error`; `run_supervised` maps to `KafkaError` at
         the edge
-  - [ ] Refactor; `ci.sh`; the `grep` for `Result<.*String>` finds nothing
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Typed errors' (Protocol in workflow.md)
+  - [x] Refactor; `ci.sh`; the `grep` for `Result<.*String>` finds nothing
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Typed errors' (Protocol in workflow.md)
+      — `scripts/verify-td64.sh 1`: PASS (prompting off)
 
 ## Phase 2: Clock and commit (TD-64.2, TD-64.3, High)
 
