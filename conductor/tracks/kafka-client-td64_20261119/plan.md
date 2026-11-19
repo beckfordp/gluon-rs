@@ -26,7 +26,7 @@ land in the services' own tracks; this plan names them.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Typed errors' (Protocol in workflow.md)
       — `scripts/verify-td64.sh 1`: PASS (prompting off)
 
-## Phase 2: Clock and commit (TD-64.2, TD-64.3, High)
+## Phase 2: Clock and commit (TD-64.2, TD-64.3, High) `[checkpoint: 92642a1]`
 
 - [x] Task 2.1: injected `Clock` `6ec11ce`
   - [x] Red: a fixed clock, and a record with a known timestamp, gives the expected age
