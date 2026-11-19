@@ -28,18 +28,21 @@ land in the services' own tracks; this plan names them.
 
 ## Phase 2: Clock and commit (TD-64.2, TD-64.3, High)
 
-- [ ] Task 2.1: injected `Clock`
-  - [ ] Red: a fixed clock, and a record with a known timestamp, gives the expected age
-  - [ ] Green: `Clock` trait + `SystemClock`; a field on `EventConsumer`;
+- [x] Task 2.1: injected `Clock` `6ec11ce`
+  - [x] Red: a fixed clock, and a record with a known timestamp, gives the expected age
+  - [x] Green: `Clock` trait + `SystemClock`; a field on `EventConsumer`;
         `run_supervised` wires `SystemClock`; `now_ms` gone
-  - [ ] Refactor; `ci.sh`
-- [ ] Task 2.2: commit in `block_in_place`
-  - [ ] Red: where testable, a multi-thread runtime test shows the commit runs off the
+  - [x] Refactor; `ci.sh`
+- [x] Task 2.2: commit in `block_in_place` `6ec11ce`
+  - [x] Red: where testable, a multi-thread runtime test shows the commit runs off the
         async worker; otherwise a review note in the plan
-  - [ ] Green: `tokio::task::block_in_place(|| consumer.commit_message(…,
+  - [x] Green: `tokio::task::block_in_place(|| consumer.commit_message(…,
         CommitMode::Sync))`; order and at-least-once unchanged
-  - [ ] Refactor; `ci.sh`
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Clock and commit' (Protocol in workflow.md)
+  - [x] Refactor; `ci.sh`
+  - Testable after all: `blocking::off_worker` (inline on a current-thread runtime,
+    where `block_in_place` panics); a mutation without it fails the multi-thread test.
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Clock and commit' (Protocol in workflow.md)
+      — `scripts/verify-td64.sh 2`: PASS (prompting off)
 
 ## Phase 3: Metrics once and newtypes (TD-64.4, TD-64.5)
 

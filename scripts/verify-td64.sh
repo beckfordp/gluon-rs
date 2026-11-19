@@ -55,6 +55,14 @@ if [ "$PHASE" -ge 1 ]; then
     a_failed_commit_says_so_and_keeps_its_cause broker_and_subscribe_failures_read_as_rdkafkas \
     a_failed_dead_letter_is_the_streams_error
 fi
+if [ "$PHASE" -ge 2 ]; then
+  check "a record's age is read from the injected clock" tests kafka-client \
+    a_records_age_is_read_from_the_consumers_clock the_system_clock_is_the_wall_clock
+  check "no wall clock read in the consume loop" bash -c '! grep -n "SystemTime::now" crates/kafka-client/src/stream.rs'
+  check "the commit runs off the async worker" tests kafka-client \
+    on_a_multi_thread_runtime_the_work_leaves_the_worker on_a_current_thread_runtime_the_work_runs_inline
+  check "the commit goes through off_worker" grep -n "off_worker(|| consumer.commit_message" crates/kafka-client/src/stream.rs
+fi
 check "scripts/ci.sh" bash scripts/ci.sh
 
 if [ "$FAILED" = 0 ]; then
