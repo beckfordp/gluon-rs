@@ -42,6 +42,10 @@ tests() {
   done
 }
 
+built_once() {
+  [ "$(grep -c "ConsumerMetrics::new" crates/kafka-client/src/stream.rs)" = 1 ]
+}
+
 no_string_results() {
   ! grep -rn 'Result<[^>]*String>' crates/kafka-client crates/kafka-event-consumer
 }
@@ -62,6 +66,11 @@ if [ "$PHASE" -ge 2 ]; then
   check "the commit runs off the async worker" tests kafka-client \
     on_a_multi_thread_runtime_the_work_leaves_the_worker on_a_current_thread_runtime_the_work_runs_inline
   check "the commit goes through off_worker" grep -n "off_worker(|| consumer.commit_message" crates/kafka-client/src/stream.rs
+fi
+if [ "$PHASE" -ge 3 ]; then
+  check "the consumer's metrics are built once" built_once
+  check "GroupId and Topic parse as Kafka allows" tests kafka-client \
+    a_topic_is_what_kafka_allows a_group_is_any_printable_name_up_to_kafkas_limit a_bad_name_says_what_and_why
 fi
 check "scripts/ci.sh" bash scripts/ci.sh
 

@@ -46,16 +46,20 @@ land in the services' own tracks; this plan names them.
 
 ## Phase 3: Metrics once and newtypes (TD-64.4, TD-64.5)
 
-- [ ] Task 3.1: `ConsumerMetrics` built once
-  - [ ] Red: `subscribe` takes the built `ConsumerMetrics` (compile-level), or a test
+- [x] Task 3.1: `ConsumerMetrics` built once `967f8ed`
+  - [x] Red: `subscribe` takes the built `ConsumerMetrics` (compile-level), or a test
         counts the families registered once
-  - [ ] Green: built in `consume`, cloned into `LagContext`
-- [ ] Task 3.2: `GroupId` and `Topic` newtypes
-  - [ ] Red: parse tests (empty, illegal characters, length > 249, valid)
-  - [ ] Green: newtypes with `FromStr` / `TryFrom<String>` and `Display`;
+  - [x] Green: built in `consume`, cloned into `LagContext`
+- [x] Task 3.2: `GroupId` and `Topic` newtypes `967f8ed`
+  - [x] Red: parse tests (empty, illegal characters, length > 249, valid)
+  - [x] Green: newtypes with `FromStr` / `TryFrom<String>` and `Display`;
         `ConsumerSettings` uses them; a config error on an invalid value
-  - [ ] Refactor; `ci.sh`; `tech-stack.md` notes the newtypes and the error types
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Metrics once and newtypes' (Protocol in workflow.md)
+  - [x] Refactor; `ci.sh`; `tech-stack.md` notes the newtypes and the error types
+  - A group id is looser than a topic (Kafka allows any): 1–249, no spaces or control
+    characters (`SettingsError::Unprintable`).
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Metrics once and newtypes' (Protocol in workflow.md)
+      — `scripts/verify-td64.sh 3`: PASS (prompting off; one `service-testing` Postgres
+      flake on the first run, unrelated, passed on rerun)
 
 ## Phase 4: Adoption and regression
 
