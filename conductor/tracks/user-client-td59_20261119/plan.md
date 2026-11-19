@@ -2,7 +2,7 @@
 
 Spec: [spec.md](./spec.md).
 
-## Phase 1: The crate
+## Phase 1: The crate `[checkpoint: b098db0]`
 
 - [x] Task 1.1: `user-client` with `UserClient` and `LookupError` `94243a5`
   - [x] Red: found, unknown (404), malformed id (400), 5xx after retries, no answer, a
