@@ -12,7 +12,7 @@ use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
 use rdkafka::error::KafkaError;
 use rdkafka::message::{Headers, Message};
 use rdkafka::types::RDKafkaErrorCode;
-use telemetry::metrics::Metrics;
+
 use tokio::sync::watch;
 
 use kafka_event_consumer::dead_letter::Publish;
@@ -26,20 +26,18 @@ use crate::headers::text_headers;
 use crate::settings::ConsumerSettings;
 
 /// A consumer subscribed to `settings`' topic, its statistics feeding the lag
-/// gauge.
+/// gauge of `metrics` (the consumer's own, built once: gluon TD-64.4).
 ///
 /// # Errors
 /// When librdkafka rejects the configuration or the subscription.
 pub fn subscribe(
     settings: &ConsumerSettings,
-    metrics: &Metrics,
+    metrics: ConsumerMetrics,
 ) -> Result<StreamConsumer<LagContext>, KafkaError> {
-    let context = LagContext {
-        metrics: ConsumerMetrics::new(metrics, &settings.group_id),
-    };
+    let context = LagContext { metrics };
     let consumer: StreamConsumer<LagContext> =
         settings.client_config().create_with_context(context)?;
-    consumer.subscribe(&[&settings.topic])?;
+    consumer.subscribe(&[settings.topic.as_str()])?;
     Ok(consumer)
 }
 
@@ -51,8 +49,8 @@ impl<R: Routes, P: Publish + Sync> EventConsumer<R, P> {
     /// The stream's failure: every broker gone, a failed commit, or a record
     /// that couldn't even be dead-lettered.
     pub async fn consume(&self, mut stop: watch::Receiver<bool>) -> Result<(), ConsumeError> {
-        let consumer = subscribe(&self.settings, &self.metrics).map_err(ConsumeError::Subscribe)?;
-        let ages = ConsumerMetrics::new(&self.metrics, &self.settings.group_id);
+        let ages = ConsumerMetrics::new(&self.metrics, self.settings.group_id.as_str());
+        let consumer = subscribe(&self.settings, ages.clone()).map_err(ConsumeError::Subscribe)?;
         loop {
             let message = tokio::select! {
                 _ = stop.wait_for(|stop| *stop) => return Ok(()),

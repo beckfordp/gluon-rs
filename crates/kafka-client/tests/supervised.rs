@@ -77,8 +77,8 @@ async fn a_consumer_told_to_stop_returns_cleanly() {
     let settings = ConsumerSettings {
         // Nothing listens: stopping must not need a broker.
         bootstrap: "127.0.0.1:9".to_owned(),
-        group_id: "group".to_owned(),
-        topic: "topic".to_owned(),
+        group_id: "group".parse().unwrap(),
+        topic: "topic".parse().unwrap(),
         lag_interval: Duration::from_secs(5),
     };
     let (_stop, stopped) = watch::channel(true);

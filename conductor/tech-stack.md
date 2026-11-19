@@ -39,6 +39,13 @@ GitHub in the sandbox).
   `application.conf`) and routes *(2026-11-18, gluon RPN-11-cleanup,
   TECHNICAL-DEBT.md S-1)*. A null-key record is dead-lettered with the key
   `""`, as Scala's consumers do *(2026-11-18, RPN-11-could-fix, S-4)*.
+  Typed errors, no `Result<_, String>`: `Routes` and `Publish` declare their own
+  `type Error`; dead-lettering fails with `DeadLetterError`, a stream with
+  `ConsumeError` (each reads as the message it replaced). An injected `Clock`
+  (`SystemClock` in services) times each record's age; the per-record sync
+  commit runs off the async worker (`blocking::off_worker`); the consumer's
+  metrics are built once; `ConsumerSettings` takes `GroupId` and `Topic`,
+  parsed where config is read (`SettingsError`) *(2026-11-19, gluon TD-64)*.
 - `telemetry::config::tracing_from_env` reads the OTEL variables for every
   service *(2026-11-18, RPN-11-cleanup, S-2)*.
 

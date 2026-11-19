@@ -110,8 +110,8 @@ fn consumer(exporter: &InMemorySpanExporter) -> (EventConsumer<Hellos, Letters>,
     let consumer = EventConsumer {
         settings: ConsumerSettings {
             bootstrap: "127.0.0.1:9".to_owned(),
-            group_id: "g".to_owned(),
-            topic: "hellos".to_owned(),
+            group_id: "g".parse().unwrap(),
+            topic: "hellos".parse().unwrap(),
             lag_interval: Duration::from_secs(5),
         },
         tracer: tracing.tracer(),
