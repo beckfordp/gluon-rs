@@ -15,7 +15,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use kafka_event_consumer::dead_letter::{DeadLetter, Publish};
+use kafka_event_consumer::dead_letter::{DeadLetter, DeadLetterError, Publish};
 use kafka_event_consumer::supervisor::{next_delay, supervise};
 use telemetry::logging::Logger;
 use telemetry::metrics::Metrics;
@@ -32,9 +32,16 @@ struct Published {
 }
 
 impl Publish for Published {
-    async fn publish(&self, topic: &str, key: Option<&str>, value: &str) -> Result<(), String> {
+    type Error = std::io::Error;
+
+    async fn publish(
+        &self,
+        topic: &str,
+        key: Option<&str>,
+        value: &str,
+    ) -> Result<(), std::io::Error> {
         if *self.fail.lock().unwrap() {
-            return Err("broker gone".to_owned());
+            return Err(std::io::Error::other("broker gone"));
         }
         self.records.lock().unwrap().push((
             topic.to_owned(),
@@ -79,13 +86,13 @@ fn guard(
 fn attempts(
     counter: &Arc<Mutex<u32>>,
     fail_first: u32,
-) -> impl FnMut() -> std::future::Ready<Result<(), String>> {
+) -> impl FnMut() -> std::future::Ready<Result<(), std::io::Error>> {
     let counter = counter.clone();
     move || {
         let mut n = counter.lock().unwrap();
         *n += 1;
         std::future::ready(if *n <= fail_first {
-            Err(format!("attempt {n}"))
+            Err(std::io::Error::other(format!("attempt {n}")))
         } else {
             Ok(())
         })
@@ -147,7 +154,36 @@ async fn a_failed_dlq_publish_fails_the_guard() {
     let result = guard
         .guard("user-events", None, "v", attempts(&calls, 99))
         .await;
-    assert!(result.is_err());
+    let Err(DeadLetterError::Publish(source)) = result else {
+        panic!("want the publish failure, got {result:?}");
+    };
+    assert_eq!(source.to_string(), "broker gone");
+    assert!(source.downcast_ref::<std::io::Error>().is_some());
+}
+
+#[tokio::test]
+async fn an_open_breaker_fails_the_guard_without_publishing() {
+    let (_, publisher, _, guard) = guard(0);
+    *publisher.fail.lock().unwrap() = true;
+    let calls = Arc::new(Mutex::new(0));
+    let mut results = Vec::new();
+    for _ in 0..4 {
+        results.push(
+            guard
+                .guard("user-events", None, "v", attempts(&calls, 99))
+                .await,
+        );
+    }
+    assert!(
+        results
+            .iter()
+            .any(|result| matches!(result, Err(DeadLetterError::BreakerOpen))),
+        "{results:?}"
+    );
+    assert_eq!(
+        DeadLetterError::BreakerOpen.to_string(),
+        "Circuit breaker is open"
+    );
 }
 
 #[test]
@@ -184,7 +220,7 @@ async fn a_failed_stream_is_rebuilt_with_backoff_and_each_restart_counted() {
                     *n
                 };
                 if n < 4 {
-                    Err(format!("build {n} failed"))
+                    Err(std::io::Error::other(format!("build {n} failed")))
                 } else {
                     let _ = stop.send(true);
                     Ok(())

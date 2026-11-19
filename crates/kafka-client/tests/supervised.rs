@@ -32,12 +32,13 @@ struct Nothing;
 
 impl Routes for Nothing {
     type Event = ();
+    type Error = std::io::Error;
 
-    fn decode(&self, _envelope: &Envelope) -> Option<Result<(), String>> {
+    fn decode(&self, _envelope: &Envelope) -> Option<Result<(), std::io::Error>> {
         None
     }
 
-    async fn handle(&self, _event_id: &str, _event: &()) -> Result<(), String> {
+    async fn handle(&self, _event_id: &str, _event: &()) -> Result<(), std::io::Error> {
         Ok(())
     }
 }

@@ -5,6 +5,7 @@
 //! needing a manual restart is what it exists to prevent), each restart
 //! counted in `purekafka.stream.restarts`.
 
+use std::fmt::Display;
 use std::future::Future;
 use std::time::Duration;
 
@@ -24,7 +25,7 @@ fn millis(delay: Duration) -> String {
 
 /// Runs `build` until it returns `Ok` (a clean stop) or `stop` is set;
 /// after each error, waits (base, doubling to `max`) and builds again.
-pub async fn supervise<F, Fut>(
+pub async fn supervise<F, Fut, E>(
     base: Duration,
     max: Duration,
     metrics: &Metrics,
@@ -33,7 +34,8 @@ pub async fn supervise<F, Fut>(
     mut build: F,
 ) where
     F: FnMut() -> Fut,
-    Fut: Future<Output = Result<(), String>>,
+    Fut: Future<Output = Result<(), E>>,
+    E: Display,
 {
     let restarts = metrics.counter("purekafka.stream.restarts");
     let mut delay = base;
@@ -46,7 +48,7 @@ pub async fn supervise<F, Fut>(
             return;
         }
         logger.warn(
-            &[("error", &error)],
+            &[("error", &error.to_string())],
             &format!(
                 "Consumer stream failed (attempt {attempt}), restarting after {}",
                 millis(delay)

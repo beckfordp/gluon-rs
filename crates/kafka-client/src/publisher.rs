@@ -38,7 +38,9 @@ impl KafkaPublisher {
 }
 
 impl Publish for KafkaPublisher {
-    async fn publish(&self, topic: &str, key: Option<&str>, value: &str) -> Result<(), String> {
+    type Error = KafkaError;
+
+    async fn publish(&self, topic: &str, key: Option<&str>, value: &str) -> Result<(), KafkaError> {
         let mut record = FutureRecord::to(topic)
             .payload(value)
             .headers(OwnedHeaders::new());
@@ -49,6 +51,6 @@ impl Publish for KafkaPublisher {
             .send(record, DELIVERY_TIMEOUT)
             .await
             .map(|_| ())
-            .map_err(|(error, _)| error.to_string())
+            .map_err(|(error, _)| error)
     }
 }

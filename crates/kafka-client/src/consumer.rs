@@ -9,11 +9,30 @@ use telemetry::logging::Logger;
 use telemetry::metrics::Metrics;
 use telemetry::tracing::SdkTracer;
 
-use kafka_event_consumer::dead_letter::{DeadLetter, Publish};
+use kafka_event_consumer::dead_letter::{DeadLetter, DeadLetterError, Publish};
 use kafka_event_consumer::envelope::{Routes, handle_record};
 use kafka_event_consumer::span::consumer_span;
+use rdkafka::error::KafkaError;
 
 use crate::settings::ConsumerSettings;
+
+/// Why a consumer stream failed, so the supervisor rebuilds it. Each reads as
+/// the message it replaced (gluon TD-64.1), the cause kept as its source.
+#[derive(Debug, thiserror::Error)]
+pub enum ConsumeError {
+    /// librdkafka refused the configuration or the subscription.
+    #[error(transparent)]
+    Subscribe(KafkaError),
+    /// Every broker is gone.
+    #[error(transparent)]
+    AllBrokersDown(KafkaError),
+    /// A handled record's offset wasn't committed.
+    #[error("commit failed: {0}")]
+    Commit(#[source] KafkaError),
+    /// A record couldn't even be dead-lettered.
+    #[error(transparent)]
+    DeadLetter(#[from] DeadLetterError),
+}
 
 /// A consumer: its settings, telemetry, routes and DLQ guard.
 pub struct EventConsumer<R, P> {
@@ -46,7 +65,7 @@ impl<R: Routes, P: Publish + Sync> EventConsumer<R, P> {
         key: Option<&str>,
         value: Option<&str>,
         headers: &[(String, String)],
-    ) -> Result<(), String> {
+    ) -> Result<(), DeadLetterError> {
         let cx = consumer_span(&self.tracer, headers, topic);
         let result = handle_record(
             topic,

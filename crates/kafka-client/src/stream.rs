@@ -21,7 +21,7 @@ use kafka_event_consumer::dead_letter::Publish;
 use kafka_event_consumer::envelope::Routes;
 use kafka_event_consumer::lag::ConsumerMetrics;
 
-use crate::consumer::EventConsumer;
+use crate::consumer::{ConsumeError, EventConsumer};
 use crate::context::LagContext;
 use crate::headers::text_headers;
 use crate::settings::ConsumerSettings;
@@ -59,9 +59,8 @@ impl<R: Routes, P: Publish + Sync> EventConsumer<R, P> {
     /// # Errors
     /// The stream's failure: every broker gone, a failed commit, or a record
     /// that couldn't even be dead-lettered.
-    pub async fn consume(&self, mut stop: watch::Receiver<bool>) -> Result<(), String> {
-        let consumer =
-            subscribe(&self.settings, &self.metrics).map_err(|error| error.to_string())?;
+    pub async fn consume(&self, mut stop: watch::Receiver<bool>) -> Result<(), ConsumeError> {
+        let consumer = subscribe(&self.settings, &self.metrics).map_err(ConsumeError::Subscribe)?;
         let ages = ConsumerMetrics::new(&self.metrics, &self.settings.group_id);
         loop {
             let message = tokio::select! {
@@ -73,7 +72,7 @@ impl<R: Routes, P: Publish + Sync> EventConsumer<R, P> {
                 Err(error)
                     if error.rdkafka_error_code() == Some(RDKafkaErrorCode::AllBrokersDown) =>
                 {
-                    return Err(error.to_string());
+                    return Err(ConsumeError::AllBrokersDown(error));
                 }
                 Err(error) => {
                     self.logger
@@ -98,7 +97,7 @@ impl<R: Routes, P: Publish + Sync> EventConsumer<R, P> {
                 .await?;
             consumer
                 .commit_message(&message, CommitMode::Sync)
-                .map_err(|error| format!("commit failed: {error}"))?;
+                .map_err(ConsumeError::Commit)?;
         }
     }
 }

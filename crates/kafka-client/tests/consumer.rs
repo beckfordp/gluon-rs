@@ -33,7 +33,14 @@ type Letter = (String, Option<String>, String);
 struct Letters(Arc<Mutex<Vec<Letter>>>);
 
 impl Publish for Letters {
-    async fn publish(&self, topic: &str, key: Option<&str>, value: &str) -> Result<(), String> {
+    type Error = std::io::Error;
+
+    async fn publish(
+        &self,
+        topic: &str,
+        key: Option<&str>,
+        value: &str,
+    ) -> Result<(), std::io::Error> {
         self.0.lock().unwrap().push((
             topic.to_owned(),
             key.map(ToOwned::to_owned),
@@ -49,17 +56,18 @@ struct Hellos(Arc<Mutex<Vec<(String, String)>>>);
 
 impl Routes for Hellos {
     type Event = String;
+    type Error = std::io::Error;
 
-    fn decode(&self, envelope: &Envelope) -> Option<Result<String, String>> {
+    fn decode(&self, envelope: &Envelope) -> Option<Result<String, std::io::Error>> {
         (envelope.event_type == "Hello").then(|| {
             envelope.payload["name"]
                 .as_str()
                 .map(ToOwned::to_owned)
-                .ok_or_else(|| "no name".to_owned())
+                .ok_or_else(|| std::io::Error::other("no name"))
         })
     }
 
-    async fn handle(&self, event_id: &str, event: &String) -> Result<(), String> {
+    async fn handle(&self, event_id: &str, event: &String) -> Result<(), std::io::Error> {
         self.0
             .lock()
             .unwrap()

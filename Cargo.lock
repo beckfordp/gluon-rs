@@ -793,6 +793,7 @@ dependencies = [
  "rdkafka",
  "serde_json",
  "telemetry",
+ "thiserror",
  "tokio",
 ]
 

@@ -14,7 +14,7 @@ use serde_json::Value;
 use telemetry::logging::Logger;
 use time::OffsetDateTime;
 
-use crate::dead_letter::{DeadLetter, Publish};
+use crate::dead_letter::{DeadLetter, DeadLetterError, Publish};
 
 /// The shared envelope (gluon docs/system-design.md "Envelope").
 #[derive(Debug, Clone, Deserialize)]
@@ -42,9 +42,13 @@ pub trait Routes: Sync {
     /// The decoded events (an enum when a consumer routes several types).
     type Event: Send + Sync;
 
+    /// The consumer's own failures: a payload that doesn't decode, a handler
+    /// that failed. Logged and dead-lettered; never the stream's error.
+    type Error: std::error::Error + Send + Sync + 'static;
+
     /// `None` when the envelope's type has no route (skipped); `Some(Err)`
     /// when it has one but the payload doesn't decode (poison).
-    fn decode(&self, envelope: &Envelope) -> Option<Result<Self::Event, String>>;
+    fn decode(&self, envelope: &Envelope) -> Option<Result<Self::Event, Self::Error>>;
 
     /// Acts on `event`; run inside the DLQ guard, so an `Err` is retried and
     /// then dead-lettered.
@@ -52,7 +56,7 @@ pub trait Routes: Sync {
         &self,
         event_id: &str,
         event: &Self::Event,
-    ) -> impl Future<Output = Result<(), String>> + Send;
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send;
 }
 
 /// Handles one record's value.
@@ -66,7 +70,7 @@ pub async fn handle_record<R: Routes, P: Publish + Sync>(
     routes: &R,
     logger: &Logger,
     dead_letter: &DeadLetter<P>,
-) -> Result<(), String> {
+) -> Result<(), DeadLetterError> {
     let Some(raw) = value else {
         logger.error(
             &[("topic", topic)],
@@ -95,6 +99,7 @@ pub async fn handle_record<R: Routes, P: Publish + Sync>(
             Ok(())
         }
         Some(Err(error)) => {
+            let error = error.to_string();
             logger.error(
                 &[
                     ("topic", topic),
@@ -124,10 +129,8 @@ async fn poison<P: Publish + Sync>(
     raw: &str,
     dead_letter: &DeadLetter<P>,
     error: &str,
-) -> Result<(), String> {
+) -> Result<(), DeadLetterError> {
     dead_letter
-        .guard(topic, key, raw, || {
-            std::future::ready(Err(error.to_owned()))
-        })
+        .guard(topic, key, raw, || std::future::ready(Err::<(), _>(error)))
         .await
 }

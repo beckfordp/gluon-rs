@@ -6,6 +6,7 @@
 //! `purekafka.dlq.published`, and the stream carries on. A failed publish
 //! fails the guard, so the supervisor restarts the stream.
 
+use std::fmt::Display;
 use std::future::Future;
 
 use telemetry::logging::Logger;
@@ -14,13 +15,28 @@ use telemetry::resilience::{CircuitBreaker, CircuitBreakerConfig, Retry, RetryCo
 
 /// Where dead letters go (a Kafka producer; a fake in tests).
 pub trait Publish {
+    /// Why a publish failed.
+    type Error: std::error::Error + Send + Sync + 'static;
+
     /// Publishes `value` with `key` to `topic`.
     fn publish(
         &self,
         topic: &str,
         key: Option<&str>,
         value: &str,
-    ) -> impl Future<Output = Result<(), String>> + Send;
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send;
+}
+
+/// Dead-lettering failed, so the record can't be passed over: the stream must
+/// restart. Each reads as purekafka's did.
+#[derive(Debug, thiserror::Error)]
+pub enum DeadLetterError {
+    /// The DLQ publish's breaker is open: not even tried.
+    #[error("Circuit breaker is open")]
+    BreakerOpen,
+    /// The DLQ publish failed, after its retries: the publisher's error.
+    #[error(transparent)]
+    Publish(Box<dyn std::error::Error + Send + Sync + 'static>),
 }
 
 /// The guard.
@@ -60,13 +76,13 @@ impl<P: Publish> DeadLetter<P> {
         topic: &str,
         key: Option<&str>,
         value: &str,
-    ) -> Result<(), PublishError> {
+    ) -> Result<(), DeadLetterError> {
         if !self.publish_breaker.acquire() {
-            return Err(PublishError::Open);
+            return Err(DeadLetterError::BreakerOpen);
         }
         let result = self.publisher.publish(topic, key, value).await;
         self.publish_breaker.record(result.is_ok());
-        result.map_err(PublishError::Failed)
+        result.map_err(|error| DeadLetterError::Publish(Box::new(error)))
     }
 
     /// Runs `process` (again, up to the retries); routes `(key, value)` to
@@ -74,16 +90,17 @@ impl<P: Publish> DeadLetter<P> {
     ///
     /// # Errors
     /// Only when the DLQ publish itself fails.
-    pub async fn guard<F, Fut>(
+    pub async fn guard<F, Fut, E>(
         &self,
         topic: &str,
         key: Option<&str>,
         value: &str,
         process: F,
-    ) -> Result<(), String>
+    ) -> Result<(), DeadLetterError>
     where
         F: FnMut() -> Fut,
-        Fut: Future<Output = Result<(), String>>,
+        Fut: Future<Output = Result<(), E>>,
+        E: Display,
     {
         let Err(error) = self
             .processing
@@ -96,29 +113,20 @@ impl<P: Publish> DeadLetter<P> {
         self.publish_retry
             .run(
                 || self.publish_once(&dlq_topic, key, value),
-                |result| matches!(result, Err(PublishError::Failed(_))),
+                |result| matches!(result, Err(DeadLetterError::Publish(_))),
                 Result::is_err,
             )
-            .await
-            .map_err(|failure| failure.to_string())?;
+            .await?;
         self.published.add(1, &[]);
         self.logger.error(
             &[
                 ("topic", topic),
                 ("dlq_topic", &dlq_topic),
                 ("key", key.unwrap_or("")),
-                ("error", &error),
+                ("error", &error.to_string()),
             ],
             "Routed unprocessable message to DLQ after exhausting retries",
         );
         Ok(())
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-enum PublishError {
-    #[error("Circuit breaker is open")]
-    Open,
-    #[error("{0}")]
-    Failed(String),
 }
