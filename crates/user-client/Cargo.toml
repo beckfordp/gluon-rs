@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+
+[package]
+name = "user-client"
+description = "The user-service lookup every Rust consumer of user-service shares (notification-service's UserClient, ADR 0025): GET /users/{id} through purerest's retry and circuit breaker; moved from user-service-rs's events-probe (gluon TD-59)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+telemetry = { path = "../telemetry" }
+thiserror = "2"
+
+[dev-dependencies]
+opentelemetry_sdk = { version = "0.33", default-features = false, features = ["trace", "testing"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync"] }

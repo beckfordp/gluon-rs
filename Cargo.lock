@@ -2131,6 +2131,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "user-client"
+version = "0.1.0"
+dependencies = [
+ "opentelemetry_sdk",
+ "reqwest 0.12.28",
+ "serde",
+ "telemetry",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "utf8-zero"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
