@@ -2,7 +2,7 @@
 
 Spec: [spec.md](./spec.md).
 
-## Phase 1: service-basics
+## Phase 1: service-basics `[checkpoint: 55253ce]`
 
 - [x] Task 1.1: `cors` module (`CorsPolicy`, `cors`, `Unrouted`, `allows`, `split_names`) `aea98c1`
   - [x] Red: notification-service-rs's CORS tests on a fixture router; the exposed header
