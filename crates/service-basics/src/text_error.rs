@@ -3,7 +3,9 @@
 //! Framework errors as tapir writes them: plain text (capture
 //! `http/unknown-path.txt`, `http/*-wrong-method.txt`).
 
+use axum::extract::Request;
 use axum::http::{StatusCode, header};
+use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 
 /// Exactly what the Scala services send for text errors (not axum's `utf-8`).
@@ -46,4 +48,13 @@ pub async fn not_found() -> TextError {
         status: StatusCode::NOT_FOUND,
         message: "Not found".to_owned(),
     }
+}
+
+/// Drops `Allow`: tapir's 405 has none (captures `http/emails-post.txt`,
+/// `health-head.txt`), axum's method router adds one. Wrap the whole router
+/// (gluon TD-52.3).
+pub async fn without_allow(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    response.headers_mut().remove(header::ALLOW);
+    response
 }

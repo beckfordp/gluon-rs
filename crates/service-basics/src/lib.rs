@@ -4,6 +4,8 @@
 //! the pieces user-service-rs and notification-service-rs both had a copy of.
 
 pub mod config;
+pub mod cors;
+pub mod edge;
 pub mod environment;
 pub mod health;
 pub mod jvm;
