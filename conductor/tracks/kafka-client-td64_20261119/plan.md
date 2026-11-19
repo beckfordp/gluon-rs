@@ -4,7 +4,7 @@ Spec: [spec.md](./spec.md). Each task is TDD: write the failing test (red), conf
 fails, implement (green), then refactor and run `scripts/ci.sh`. The adoption commits
 land in the services' own tracks; this plan names them.
 
-## Phase 1: Typed errors (TD-64.1, High)
+## Phase 1: Typed errors (TD-64.1, High) `[checkpoint: 09ac9ae]`
 
 - [x] Task 1.1: `kafka-event-consumer` errors `96988b8`
   - [x] Red: tests that `dead_letter` and `handle_record` return `DeadLetterError` /
