@@ -1,0 +1,8 @@
+{
+  "track_id": "kafka-client-td64_20261119",
+  "type": "chore",
+  "status": "new",
+  "created_at": "2026-11-19T20:00:00Z",
+  "updated_at": "2026-11-19T20:00:00Z",
+  "description": "kafka-client review findings (gluon TD-64.1–64.5): typed errors, injected clock, non-blocking commit, metrics once, GroupId/Topic newtypes; adopted by user-service-rs and notification-service-rs in their own tracks. All-Rust sandbox prep P2."
+}
