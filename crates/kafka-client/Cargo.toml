@@ -18,7 +18,7 @@ telemetry = { path = "../telemetry" }
 opentelemetry = { version = "0.33", default-features = false, features = ["trace"] }
 rdkafka = { version = "0.39", default-features = false, features = ["tokio"] }
 thiserror = "2"
-tokio = { version = "1", features = ["macros", "sync"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
 
 [dev-dependencies]
 opentelemetry_sdk = { version = "0.33", default-features = false, features = ["trace", "testing"] }

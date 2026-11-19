@@ -13,12 +13,14 @@
 )]
 
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use kafka_client::clock::{Clock, SystemClock};
 use kafka_client::consumer::EventConsumer;
 use kafka_client::settings::ConsumerSettings;
 use kafka_event_consumer::dead_letter::{DeadLetter, Publish};
 use kafka_event_consumer::envelope::{Envelope, Routes};
+use kafka_event_consumer::lag::ConsumerMetrics;
 use opentelemetry_sdk::trace::InMemorySpanExporter;
 use serde_json::json;
 use telemetry::logging::Logger;
@@ -76,6 +78,15 @@ impl Routes for Hellos {
     }
 }
 
+/// A clock stopped at `0` + `millis`.
+struct Stopped(u64);
+
+impl Clock for Stopped {
+    fn now(&self) -> SystemTime {
+        UNIX_EPOCH + Duration::from_millis(self.0)
+    }
+}
+
 fn consumer(exporter: &InMemorySpanExporter) -> (EventConsumer<Hellos, Letters>, Letters, Tracing) {
     let metrics = Metrics::new("kafka-client");
     let logger = Logger::to_writer("kafka-client", Arc::new(Mutex::new(Vec::<u8>::new())));
@@ -108,6 +119,7 @@ fn consumer(exporter: &InMemorySpanExporter) -> (EventConsumer<Hellos, Letters>,
         metrics,
         routes: Hellos::default(),
         dead_letter,
+        clock: Arc::new(Stopped(10_500)),
     };
     (consumer, letters, tracing)
 }
@@ -177,4 +189,28 @@ async fn a_null_key_is_dead_lettered_with_an_empty_key() {
             "{not json".to_owned()
         )]
     );
+}
+
+#[test]
+fn a_records_age_is_read_from_the_consumers_clock() {
+    let exporter = InMemorySpanExporter::default();
+    let (consumer, _, _) = consumer(&exporter);
+    let ages = ConsumerMetrics::new(&consumer.metrics, "g");
+    consumer.record_age(&ages, "hellos", 10_000);
+    let text = consumer.metrics.render();
+    assert!(
+        text.contains("purekafka_consumer_event_age_seconds_bucket{messaging_consumer_group_name=\"g\",messaging_destination_name=\"hellos\",otel_scope_name=\"kafka-client\",le=\"0.5\"} 1"),
+        "{text}"
+    );
+    assert!(
+        text.contains("purekafka_consumer_event_age_seconds_bucket{messaging_consumer_group_name=\"g\",messaging_destination_name=\"hellos\",otel_scope_name=\"kafka-client\",le=\"0.25\"} 0"),
+        "half a second, not less: {text}"
+    );
+}
+
+#[test]
+fn the_system_clock_is_the_wall_clock() {
+    let before = SystemTime::now();
+    let now = SystemClock.now();
+    assert!(now >= before && now <= SystemTime::now());
 }

@@ -8,8 +8,6 @@
 //! harness runs it (the probe group, notification-service's consumer groups),
 //! not this crate's tests.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
 use rdkafka::error::KafkaError;
 use rdkafka::message::{Headers, Message};
@@ -21,18 +19,11 @@ use kafka_event_consumer::dead_letter::Publish;
 use kafka_event_consumer::envelope::Routes;
 use kafka_event_consumer::lag::ConsumerMetrics;
 
+use crate::blocking::off_worker;
 use crate::consumer::{ConsumeError, EventConsumer};
 use crate::context::LagContext;
 use crate::headers::text_headers;
 use crate::settings::ConsumerSettings;
-
-fn now_ms() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |since| {
-            i64::try_from(since.as_millis()).unwrap_or(i64::MAX)
-        })
-}
 
 /// A consumer subscribed to `settings`' topic, its statistics feeding the lag
 /// gauge.
@@ -82,7 +73,7 @@ impl<R: Routes, P: Publish + Sync> EventConsumer<R, P> {
             };
             let topic = message.topic().to_owned();
             if let Some(timestamp) = message.timestamp().to_millis() {
-                ages.record_age(&topic, now_ms(), timestamp);
+                self.record_age(&ages, &topic, timestamp);
             }
             let key = message
                 .key()
@@ -95,8 +86,7 @@ impl<R: Routes, P: Publish + Sync> EventConsumer<R, P> {
             });
             self.process(&topic, key.as_deref(), value.as_deref(), &headers)
                 .await?;
-            consumer
-                .commit_message(&message, CommitMode::Sync)
+            off_worker(|| consumer.commit_message(&message, CommitMode::Sync))
                 .map_err(ConsumeError::Commit)?;
         }
     }

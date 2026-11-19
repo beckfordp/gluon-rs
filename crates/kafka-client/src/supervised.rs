@@ -8,6 +8,7 @@
 //! (`kafka-event-consumer`'s `supervise`). Moved from the events-probe's and
 //! notification-service-rs's hand-built copies.
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use kafka_event_consumer::dead_letter::DeadLetter;
@@ -20,6 +21,7 @@ use telemetry::resilience::{CircuitBreakerConfig, RetryConfig};
 use telemetry::tracing::SdkTracer;
 use tokio::sync::watch;
 
+use crate::clock::SystemClock;
 use crate::consumer::EventConsumer;
 use crate::publisher::KafkaPublisher;
 use crate::settings::ConsumerSettings;
@@ -106,6 +108,7 @@ pub async fn run_supervised<R: Routes + Send>(
         metrics,
         routes,
         dead_letter,
+        clock: Arc::new(SystemClock),
     };
     supervise(
         resilience.restart_base_delay,

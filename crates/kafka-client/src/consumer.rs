@@ -3,6 +3,8 @@
 //! One consumer: what it needs, and what it does with each record. The loop
 //! that feeds it records from the broker is [`EventConsumer::consume`].
 
+use std::sync::Arc;
+
 use opentelemetry::context::FutureExt;
 use opentelemetry::trace::TraceContextExt;
 use telemetry::logging::Logger;
@@ -11,9 +13,11 @@ use telemetry::tracing::SdkTracer;
 
 use kafka_event_consumer::dead_letter::{DeadLetter, DeadLetterError, Publish};
 use kafka_event_consumer::envelope::{Routes, handle_record};
+use kafka_event_consumer::lag::ConsumerMetrics;
 use kafka_event_consumer::span::consumer_span;
 use rdkafka::error::KafkaError;
 
+use crate::clock::{Clock, epoch_millis};
 use crate::settings::ConsumerSettings;
 
 /// Why a consumer stream failed, so the supervisor rebuilds it. Each reads as
@@ -48,9 +52,17 @@ pub struct EventConsumer<R, P> {
     pub routes: R,
     /// The DLQ guard.
     pub dead_letter: DeadLetter<P>,
+    /// What "now" is, for each record's age.
+    pub clock: Arc<dyn Clock>,
 }
 
 impl<R: Routes, P: Publish + Sync> EventConsumer<R, P> {
+    /// Records a record's age: from its timestamp (`record_ms`) to the
+    /// consumer's now.
+    pub fn record_age(&self, ages: &ConsumerMetrics, topic: &str, record_ms: i64) {
+        ages.record_age(topic, epoch_millis(self.clock.now()), record_ms);
+    }
+
     /// Handles one record inside its "<topic> process" span (gluon-rs
     /// `kafka-event-consumer`'s `handle_record`: a null value or unrelated type
     /// is skipped; anything that fails, poison included, is retried and then

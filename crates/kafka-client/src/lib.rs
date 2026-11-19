@@ -10,6 +10,8 @@
 //! `kafka-event-consumer`'s, which stays client-free. Moved from
 //! user-service-rs's events-probe (gluon `TECHNICAL_DEBT.md` TD-S5).
 
+pub mod blocking;
+pub mod clock;
 pub mod consumer;
 pub mod context;
 pub mod headers;
