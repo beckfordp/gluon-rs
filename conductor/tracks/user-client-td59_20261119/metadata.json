@@ -1,8 +1,8 @@
 {
   "track_id": "user-client-td59_20261119",
   "type": "refactor",
-  "status": "in_progress",
+  "status": "completed",
   "created_at": "2026-11-20T00:00:00Z",
-  "updated_at": "2026-11-20T00:00:00Z",
+  "updated_at": "2026-11-20T00:45:00Z",
   "description": "gluon TD-59: the user-service lookup (Scala UserClient, ADR 0025) moves from user-service-rs's events-probe to a gluon-rs crate, for notification-service-rs's order/payment/fulfilment consumers. All-Rust sandbox prep P2."
 }

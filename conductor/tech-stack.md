@@ -46,6 +46,13 @@ GitHub in the sandbox).
   commit runs off the async worker (`blocking::off_worker`); the consumer's
   metrics are built once; `ConsumerSettings` takes `GroupId` and `Topic`,
   parsed where config is read (`SettingsError`) *(2026-11-19, gluon TD-64)*.
+- `user-client`: notification-service's `UserClient` (ADR 0025), `GET /users/{id}` through
+  `telemetry::client`'s retry and breaker: 200 the email, 400/404 none, else `LookupError`.
+  Moved from the events-probe for notification-service-rs's consumers *(2026-11-20, gluon
+  TD-59)*.
+- `service-basics::edge`: the Scala services' HTTP edge, http4s's CORS (`CorsPolicy`,
+  exposed headers per service) and tapir's Allow-less 405, wrapping the finished router
+  *(2026-11-19, gluon TD-52.3)*.
 - `telemetry::config::tracing_from_env` reads the OTEL variables for every
   service *(2026-11-18, RPN-11-cleanup, S-2)*.
 
