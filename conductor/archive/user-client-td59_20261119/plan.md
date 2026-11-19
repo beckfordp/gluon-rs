@@ -11,7 +11,7 @@ Spec: [spec.md](./spec.md).
 - [x] Task: Conductor - User Manual Verification 'Phase 1: The crate' (Protocol in workflow.md)
       — `scripts/verify-td59.sh 1`: PASS (prompting off)
 
-## Phase 2: Adoption and regression
+## Phase 2: Adoption and regression `[checkpoint: 9bfb89f]`
 
 - [x] Task 2.1: events-probe uses it (user-service-rs track `user-client-td59_20261119`) — `39db09c`
 - [x] Task 2.2: gluon `bin/verify-port user-service`; TD-59 ticked; cheat-sheet note for
