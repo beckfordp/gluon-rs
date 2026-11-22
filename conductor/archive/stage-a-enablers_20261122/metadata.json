@@ -1,7 +1,7 @@
 {
   "track_id": "stage-a-enablers_20261122",
   "type": "feature",
-  "status": "new",
+  "status": "archived",
   "created_at": "2026-11-22T19:25:00Z",
   "updated_at": "2026-11-22T19:25:00Z",
   "description": "What the six all-Rust ports need from gluon-rs: per-service CORS headers, OpenAPI DELETE/PUT/PATCH, query parameters, list and nested schemas, a built-in AsyncAPI page, a fail-fast Redis cache, an outbox writer, test Redis (gluon all-Rust Stage A P0.3)."
