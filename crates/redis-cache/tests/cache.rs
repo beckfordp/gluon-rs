@@ -178,3 +178,29 @@ async fn an_unreadable_cached_value_is_loaded_again() {
         product(7)
     );
 }
+
+// --- any command, bounded the same way (all-Rust Stage A, cart: its store is Redis) --------
+
+#[tokio::test]
+async fn any_command_runs_bounded_and_a_script_runs_atomically() {
+    let redis = Redis::start();
+    let cache = Cache::new(&redis.url(), TIMEOUT).unwrap();
+    let mut hset = redis_cache::redis::cmd("HSET");
+    hset.arg("cart:1").arg("a").arg("2");
+    let added: i64 = cache.query(&hset).await.unwrap();
+    assert_eq!(added, 1);
+    let mut eval = redis_cache::redis::cmd("EVAL");
+    eval.arg("redis.call('HINCRBY', KEYS[1], 'a', ARGV[1]) return redis.call('HGETALL', KEYS[1])")
+        .arg(1)
+        .arg("cart:1")
+        .arg(3);
+    let fields: Vec<String> = cache.query(&eval).await.unwrap();
+    assert_eq!(fields, ["a", "5"]);
+    redis.stop();
+    let mut get = redis_cache::redis::cmd("HGETALL");
+    get.arg("cart:1");
+    assert!(matches!(
+        cache.query::<Vec<String>>(&get).await,
+        Err(CacheError::Unavailable(_))
+    ));
+}

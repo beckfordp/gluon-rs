@@ -1,0 +1,8 @@
+{
+  "track_id": "redis-query_20261122",
+  "type": "feature",
+  "status": "archived",
+  "created_at": "2026-11-22T20:50:00Z",
+  "updated_at": "2026-11-22T20:55:00Z",
+  "description": "redis-cache: any command bounded (Cache::query), redis re-exported, for cart-service whose store is Redis (all-Rust Stage A)."
+}

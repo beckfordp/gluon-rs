@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-//! A Redis cache for the Rust ports' cache-aside reads ([`Cache::get_or_load`]) (cart, catalog and
+//! A Redis client for the Rust ports: cache-aside reads ([`Cache::get_or_load`]) and,
+//! for cart-service, its store ([`Cache::query`]) (cart, catalog and
 //! order-service cache in Redis in front of Postgres; gluon all-Rust Stage A
 //! P0.3).
 //!
@@ -19,6 +20,8 @@ use std::time::Duration;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+/// The client this wraps, for building commands ([`Cache::query`]).
+pub use redis;
 use redis::aio::MultiplexedConnection;
 use redis::{AsyncConnectionConfig, Client, RedisError};
 use tokio::sync::Mutex;
@@ -117,6 +120,19 @@ impl Cache {
             let _ = self.set(key, &json, ttl).await;
         }
         Ok(value)
+    }
+
+    /// Any command (a script's `EVAL`, `HGETALL`, ...), bounded and reconnected
+    /// like the others: for a service whose store is Redis (cart-service).
+    ///
+    /// # Errors
+    /// [`CacheError::Unavailable`]: Redis didn't answer, or refused the
+    /// command, or its reply isn't a `T`.
+    pub async fn query<T: redis::FromRedisValue>(
+        &self,
+        command: &redis::Cmd,
+    ) -> Result<T, CacheError> {
+        self.run(command).await
     }
 
     /// Whether Redis answers `PING` within the timeout.
