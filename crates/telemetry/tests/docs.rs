@@ -381,3 +381,103 @@ fn serde_json_keeps_insertion_order() {
         ["b", "a"]
     );
 }
+
+// --- all-Rust Stage A P0.3: what the six ports' documents need -----------------------------
+
+#[derive(JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+/// A cart line.
+struct Line {
+    /// The product.
+    product_id: String,
+    quantity: u32,
+}
+
+#[derive(JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+/// A cart.
+struct Cart {
+    lines: Vec<Line>,
+    total: Money,
+}
+
+#[derive(JsonSchema)]
+#[allow(dead_code)]
+/// An amount.
+struct Money {
+    minor: i64,
+    currency: String,
+}
+
+#[test]
+fn delete_put_and_patch_are_operations_too() {
+    let doc = Api::new("Cart", "1.0")
+        .operation(Operation::put("/carts/{id}/items").response(200, "", None))
+        .operation(Operation::patch("/carts/{id}").response(200, "", None))
+        .operation(Operation::delete("/carts/{id}").response(204, "", None))
+        .to_value();
+    let methods: Vec<&str> = ["/carts/{id}/items", "/carts/{id}"]
+        .iter()
+        .flat_map(|p| doc["paths"][*p].as_object().unwrap().keys())
+        .map(String::as_str)
+        .collect();
+    assert_eq!(methods, ["put", "patch", "delete"]);
+    assert_eq!(
+        doc["paths"]["/carts/{id}"]["delete"]["operationId"],
+        "deleteCartsId"
+    );
+}
+
+#[test]
+fn a_query_parameter_is_documented_as_tapir_does() {
+    let doc = Api::new("Catalog", "1.0")
+        .operation(
+            Operation::get("/products")
+                .query_parameter("category", "Only this category", json!("books"))
+                .response(200, "", None),
+        )
+        .to_value();
+    assert_eq!(
+        doc["paths"]["/products"]["get"]["parameters"],
+        json!([{
+            "name": "category", "in": "query", "description": "Only this category",
+            "required": false, "schema": {"type": "string"}, "example": "books"
+        }])
+    );
+}
+
+#[test]
+fn a_list_body_is_an_array_of_the_component() {
+    let doc = Api::new("Cart", "1.0")
+        .operation(Operation::get("/carts").response(200, "", Some(("Cart[]", json!([])))))
+        .to_value();
+    assert_eq!(
+        doc["paths"]["/carts"]["get"]["responses"]["200"]["content"]["application/json"]["schema"],
+        json!({"type": "array", "items": {"$ref": "#/components/schemas/Cart"}})
+    );
+}
+
+#[test]
+fn nested_types_become_components_and_refs_point_at_them() {
+    let doc = Api::new("Cart", "1.0").schema::<Cart>().to_value();
+    let schemas = doc["components"]["schemas"].as_object().unwrap();
+    let names: Vec<&str> = schemas.keys().map(String::as_str).collect();
+    assert_eq!(names, ["Cart", "Line", "Money"]);
+    assert!(
+        schemas["Cart"].get("$defs").is_none(),
+        "{}",
+        schemas["Cart"]
+    );
+    assert_eq!(
+        schemas["Cart"]["properties"]["lines"]["items"],
+        json!({"$ref": "#/components/schemas/Line"})
+    );
+    assert_eq!(
+        schemas["Cart"]["properties"]["total"],
+        json!({"$ref": "#/components/schemas/Money"})
+    );
+    let text = doc.to_string();
+    assert!(!text.contains("#/$defs/"), "{text}");
+}

@@ -35,8 +35,9 @@ const ALLOWED_METHODS: [Method; 5] = [
 /// `Access-Control-Allow-Methods`, in the capture's order.
 const ALLOW_METHODS: &str = "PATCH, PUT, GET, POST, DELETE";
 
-/// The one request header a preflight may ask for, compared case-insensitively.
-const ALLOWED_HEADER: &str = "Content-Type";
+/// The request headers a preflight may ask for by default, compared
+/// case-insensitively.
+const ALLOWED_HEADERS: &[&str] = &["Content-Type"];
 
 /// http4s's `Vary` on every OPTIONS answer: the policy lists methods and
 /// headers, and allows any origin (so not `Origin`).
@@ -57,12 +58,24 @@ impl IntoResponseParts for Unrouted {
     }
 }
 
-/// What differs between the services' `Cors.scala`: the headers a
-/// cross-origin script may read (`withExposeHeadersIn`; user-service's
-/// `X-Total-Count`). The default exposes none.
-#[derive(Debug, Clone, Default)]
+/// What differs between the services' `Cors.scala`: the request headers a
+/// preflight may ask for (`withAllowHeadersIn`; inventory, fulfilment, payment
+/// and order-service add `Authorization`), and the headers a cross-origin
+/// script may read (`withExposeHeadersIn`; user-service's `X-Total-Count`).
+/// The default allows `Content-Type` and exposes none.
+#[derive(Debug, Clone)]
 pub struct CorsPolicy {
+    allowed: &'static [&'static str],
     exposed: Option<HeaderValue>,
+}
+
+impl Default for CorsPolicy {
+    fn default() -> Self {
+        Self {
+            allowed: ALLOWED_HEADERS,
+            exposed: None,
+        }
+    }
 }
 
 impl CorsPolicy {
@@ -71,7 +84,29 @@ impl CorsPolicy {
     pub fn exposing(headers: &'static str) -> Self {
         Self {
             exposed: Some(HeaderValue::from_static(headers)),
+            ..Self::default()
         }
+    }
+
+    /// Allows these request headers (`Access-Control-Allow-Headers` lists them
+    /// in this order) instead of `Content-Type` alone.
+    #[must_use]
+    pub fn allowing(mut self, headers: &'static [&'static str]) -> Self {
+        self.allowed = headers;
+        self
+    }
+
+    /// Whether the policy allows a preflight for `method` with `headers`: the
+    /// method is one of the five, and every header is an allowed one (an empty
+    /// name isn't).
+    #[must_use]
+    pub fn allows(&self, method: &Method, headers: &[String]) -> bool {
+        ALLOWED_METHODS.contains(method)
+            && headers.iter().all(|name| {
+                self.allowed
+                    .iter()
+                    .any(|allowed| name.eq_ignore_ascii_case(allowed))
+            })
     }
 }
 
@@ -84,7 +119,7 @@ pub async fn cors(State(policy): State<CorsPolicy>, request: Request, next: Next
         && is_options
         && let Some(method) = requested_method(headers)
     {
-        return preflight(allows(&method, &requested_headers(headers)));
+        return preflight(&policy, policy.allows(&method, &requested_headers(headers)));
     }
     let mut response = next.run(request).await;
     if response.extensions().get::<Unrouted>().is_some() {
@@ -106,7 +141,7 @@ pub async fn cors(State(policy): State<CorsPolicy>, request: Request, next: Next
 /// A preflight's answer, on any path: 200, empty; the `Access-Control-Allow-*`
 /// headers only when the policy allows the request (capture
 /// `cors-preflight-bad-header.txt`: only `Vary` otherwise).
-fn preflight(allowed: bool) -> Response {
+fn preflight(policy: &CorsPolicy, allowed: bool) -> Response {
     let mut response = StatusCode::OK.into_response();
     let headers = response.headers_mut();
     if allowed {
@@ -115,10 +150,9 @@ fn preflight(allowed: bool) -> Response {
             ACCESS_CONTROL_ALLOW_METHODS,
             HeaderValue::from_static(ALLOW_METHODS),
         );
-        headers.insert(
-            ACCESS_CONTROL_ALLOW_HEADERS,
-            HeaderValue::from_static(ALLOWED_HEADER),
-        );
+        if let Ok(value) = HeaderValue::from_str(&policy.allowed.join(", ")) {
+            headers.insert(ACCESS_CONTROL_ALLOW_HEADERS, value);
+        }
     }
     add_vary(headers);
     response
@@ -149,17 +183,6 @@ fn requested_headers(headers: &HeaderMap) -> Vec<String> {
         .iter()
         .flat_map(|value| split_names(&String::from_utf8_lossy(value.as_bytes())))
         .collect()
-}
-
-/// Whether the policy allows a preflight for `method` with `headers`: the
-/// method is one of the five, and every header is `Content-Type` (an empty
-/// name isn't).
-#[must_use]
-pub fn allows(method: &Method, headers: &[String]) -> bool {
-    ALLOWED_METHODS.contains(method)
-        && headers
-            .iter()
-            .all(|name| name.eq_ignore_ascii_case(ALLOWED_HEADER))
 }
 
 /// A header list split as Java's `String.split("\\s*,\\s*")`: no comma is the

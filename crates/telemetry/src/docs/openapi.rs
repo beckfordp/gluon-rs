@@ -62,6 +62,24 @@ impl Operation {
         Self::new("post", path)
     }
 
+    /// A PUT operation on `path`.
+    #[must_use]
+    pub fn put(path: &str) -> Self {
+        Self::new("put", path)
+    }
+
+    /// A PATCH operation on `path`.
+    #[must_use]
+    pub fn patch(path: &str) -> Self {
+        Self::new("patch", path)
+    }
+
+    /// A DELETE operation on `path`.
+    #[must_use]
+    pub fn delete(path: &str) -> Self {
+        Self::new("delete", path)
+    }
+
     /// Adds a tag.
     #[must_use]
     pub fn tag(mut self, tag: &str) -> Self {
@@ -85,12 +103,29 @@ impl Operation {
 
     /// A required string path parameter.
     #[must_use]
-    pub fn path_parameter(mut self, name: &str, description: &str, example: Value) -> Self {
+    pub fn path_parameter(self, name: &str, description: &str, example: Value) -> Self {
+        self.parameter("path", name, description, true, example)
+    }
+
+    /// An optional string query parameter.
+    #[must_use]
+    pub fn query_parameter(self, name: &str, description: &str, example: Value) -> Self {
+        self.parameter("query", name, description, false, example)
+    }
+
+    fn parameter(
+        mut self,
+        place: &str,
+        name: &str,
+        description: &str,
+        required: bool,
+        example: Value,
+    ) -> Self {
         let mut parameter = Map::new();
         parameter.insert("name".into(), json!(name));
-        parameter.insert("in".into(), json!("path"));
+        parameter.insert("in".into(), json!(place));
         parameter.insert("description".into(), json!(description));
-        parameter.insert("required".into(), json!(true));
+        parameter.insert("required".into(), json!(required));
         parameter.insert("schema".into(), json!({"type": "string"}));
         parameter.insert("example".into(), example);
         self.parameters.push(Value::Object(parameter));
@@ -167,8 +202,12 @@ impl Operation {
     }
 }
 
+/// A component's `$ref`; `Name[]` is an array of it.
 fn schema_ref(name: &str) -> Value {
-    json!({"$ref": format!("#/components/schemas/{name}")})
+    match name.strip_suffix("[]") {
+        Some(item) => json!({"type": "array", "items": schema_ref(item)}),
+        None => json!({"$ref": format!("#/components/schemas/{name}")}),
+    }
 }
 
 fn json_content(schema: Value, example: &Value) -> Value {
@@ -194,6 +233,26 @@ pub fn operation_id(method: &str, path: &str) -> String {
         }
     }
     id
+}
+
+/// Rewrites every `#/$defs/<name>` reference to `#/components/schemas/<name>`.
+fn point_refs_at_components(value: &mut Value) {
+    match value {
+        Value::Object(map) => {
+            for (key, child) in map.iter_mut() {
+                if key == "$ref"
+                    && let Value::String(target) = child
+                    && let Some(name) = target.strip_prefix("#/$defs/")
+                {
+                    *target = format!("#/components/schemas/{name}");
+                } else {
+                    point_refs_at_components(child);
+                }
+            }
+        }
+        Value::Array(items) => items.iter_mut().for_each(point_refs_at_components),
+        _ => {}
+    }
 }
 
 /// The document: title, version, operations and component schemas.
@@ -224,16 +283,27 @@ impl Api {
         self
     }
 
-    /// Adds `T`'s schema as a component, named after the type.
+    /// Adds `T`'s schema as a component, named after the type, and each type
+    /// nested in it as a component of its own (its `$defs`, their `$ref`s
+    /// pointing at `components/schemas`).
     #[must_use]
     pub fn schema<T: JsonSchema>(mut self) -> Self {
         let mut schema = SchemaSettings::draft2020_12()
             .into_generator()
             .root_schema_for::<T>()
             .to_value();
+        let mut nested = Map::new();
         if let Value::Object(map) = &mut schema {
             map.remove("$schema");
+            if let Some(Value::Object(defs)) = map.remove("$defs") {
+                nested = defs;
+            }
         }
+        for (name, mut def) in nested {
+            point_refs_at_components(&mut def);
+            self.schemas.insert(name, def);
+        }
+        point_refs_at_components(&mut schema);
         self.schemas.insert(T::schema_name().into_owned(), schema);
         self
     }

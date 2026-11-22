@@ -5,7 +5,10 @@
 //! `/docs/asyncapi.json` (`Docs.routes`, with `/docs/asyncapi` redirecting to
 //! `/docs/asyncapi/`), and the HTML html-template renders from it, served from
 //! a directory as user-service's `AppRoutes` serves it (http4s `fileService`).
+//! A port that needs no byte identity serves [`page`] instead, built into the
+//! binary: no npm, no files (gluon all-Rust Stage A, decision D2).
 
+use std::fmt::Write as _;
 use std::path::{Component, Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
@@ -328,5 +331,139 @@ pub fn router(document: &Value, html_dir: PathBuf) -> Router {
             "/docs/asyncapi/{*path}",
             get(move |UrlPath(path): UrlPath<String>| async move { file(&html_dir, &path, true).await })
                 .head(method_not_allowed),
+        )
+}
+
+/// Text made safe inside HTML.
+fn escape(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// What the service does on a channel, from the operations naming it:
+/// "publishes", "consumes" or both.
+fn directions(document: &Value, channel_key: &str) -> String {
+    let target = format!("#/channels/{channel_key}");
+    let mut found: Vec<&str> = Vec::new();
+    if let Some(operations) = document["operations"].as_object() {
+        for operation in operations.values() {
+            if operation["channel"]["$ref"].as_str() != Some(target.as_str()) {
+                continue;
+            }
+            let verb = match operation["action"].as_str() {
+                Some("send") => "publishes",
+                Some("receive") => "consumes",
+                _ => continue,
+            };
+            if !found.contains(&verb) {
+                found.push(verb);
+            }
+        }
+    }
+    found.join(" and ")
+}
+
+/// A page a person reads for `document` (an AsyncAPI 3 document as
+/// [`document`] builds it): each channel's address, what the service does on
+/// it, and each message with its payload schema. Plain HTML, no script.
+#[must_use]
+pub fn page(document: &Value) -> String {
+    let title = format!(
+        "{} {}",
+        document["info"]["title"].as_str().unwrap_or("Service"),
+        document["info"]["version"].as_str().unwrap_or("")
+    );
+    let mut sections = String::new();
+    let channels = document["channels"]
+        .as_object()
+        .cloned()
+        .unwrap_or_default();
+    if channels.is_empty() {
+        sections.push_str("<p>This service publishes and consumes nothing.</p>\n");
+    }
+    for (key, channel) in &channels {
+        let address = channel["address"].as_str().unwrap_or(key);
+        let _ = write!(
+            sections,
+            "<section>\n<h2><code>{}</code></h2>\n<p>The service {} it.</p>\n",
+            escape(address),
+            escape(&directions(document, key))
+        );
+        if let Some(messages) = channel["messages"].as_object() {
+            for message in messages.values() {
+                let name = message["name"].as_str().unwrap_or_default();
+                let schema = serde_json::to_string_pretty(&message["payload"]).unwrap_or_default();
+                let _ = writeln!(sections, "<h3>{}</h3>", escape(name));
+                if let Some(description) = message["description"].as_str() {
+                    let _ = writeln!(sections, "<p>{}</p>", escape(description));
+                }
+                let _ = writeln!(sections, "<pre>{}</pre>", escape(&schema));
+            }
+        }
+        sections.push_str("</section>\n");
+    }
+    format!(
+        "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n\
+         <title>{title} — AsyncAPI</title>\n\
+         <style>body{{font-family:system-ui,sans-serif;max-width:60rem;margin:2rem auto;\
+         padding:0 1rem}}pre{{background:#f4f4f4;padding:1rem;overflow-x:auto}}</style>\n\
+         </head>\n<body>\n<h1>{title}</h1>\n\
+         <p>Kafka events (<a href=\"/docs/asyncapi.json\">AsyncAPI 3 document</a>).</p>\n\
+         {sections}</body>\n</html>\n",
+        title = escape(title.trim()),
+    )
+}
+
+/// `/docs/asyncapi.json`, `/docs/asyncapi` and [`page`] at `/docs/asyncapi/`
+/// (and `index.html`); anything else under it is an empty 404.
+pub fn router_with_page(document: &Value) -> Router {
+    let json = serde_json::to_string(document).unwrap_or_default();
+    let html = page(document);
+    let index = html.clone();
+    let html_response =
+        |html: String| ([(header::CONTENT_TYPE, "text/html; charset=utf-8")], html).into_response();
+    Router::new()
+        .route(
+            "/docs/asyncapi.json",
+            get(move || async move {
+                ([(header::CONTENT_TYPE, "application/json")], json).into_response()
+            })
+            .head(method_not_allowed),
+        )
+        .route(
+            "/docs/asyncapi",
+            get(|| async {
+                (
+                    StatusCode::MOVED_PERMANENTLY,
+                    [(header::LOCATION, "/docs/asyncapi/")],
+                )
+                    .into_response()
+            })
+            .head(method_not_allowed),
+        )
+        .route(
+            "/docs/asyncapi/",
+            get(move || async move { html_response(html) }).head(method_not_allowed),
+        )
+        .route(
+            "/docs/asyncapi/{*path}",
+            get(move |UrlPath(path): UrlPath<String>| async move {
+                if path == "index.html" {
+                    html_response(index)
+                } else {
+                    StatusCode::NOT_FOUND.into_response()
+                }
+            })
+            .head(method_not_allowed),
         )
 }

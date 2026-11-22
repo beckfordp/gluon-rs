@@ -17,7 +17,7 @@ use axum::http::StatusCode;
 use axum::middleware::{Next, from_fn};
 use axum::response::Response;
 use axum::routing::{any, get};
-use service_basics::cors::{CorsPolicy, Unrouted, allows, split_names};
+use service_basics::cors::{CorsPolicy, Unrouted, split_names};
 use service_basics::edge::edge;
 use service_basics::text_error::{self, TextError, method_not_allowed};
 use tower::ServiceExt;
@@ -371,12 +371,44 @@ async fn a_wrong_method_is_tapirs_405_without_allow() {
 #[test]
 fn the_policy_allows_its_five_methods_and_content_type_only() {
     use axum::http::Method;
+    let policy = CorsPolicy::default();
     let content_type = vec!["content-type".to_owned()];
-    assert!(allows(&Method::GET, &content_type));
-    assert!(allows(&Method::DELETE, &[]));
-    assert!(!allows(&Method::HEAD, &[]));
-    assert!(!allows(&Method::GET, &["authorization".to_owned()]));
-    assert!(!allows(&Method::GET, &[String::new()]));
+    assert!(policy.allows(&Method::GET, &content_type));
+    assert!(policy.allows(&Method::DELETE, &[]));
+    assert!(!policy.allows(&Method::HEAD, &[]));
+    assert!(!policy.allows(&Method::GET, &["authorization".to_owned()]));
+    assert!(!policy.allows(&Method::GET, &[String::new()]));
+}
+
+#[test]
+fn a_policy_may_allow_authorization_too() {
+    // inventory, fulfilment, payment and order-service's Cors.scala (all-Rust Stage A)
+    use axum::http::Method;
+    let policy = CorsPolicy::default().allowing(&["Content-Type", "Authorization"]);
+    let both = vec!["authorization".to_owned(), "Content-Type".to_owned()];
+    assert!(policy.allows(&Method::GET, &both));
+    assert!(!policy.allows(&Method::GET, &["x-other".to_owned()]));
+}
+
+#[tokio::test]
+async fn a_preflight_lists_the_policys_headers() {
+    let policy = CorsPolicy::default().allowing(&["Content-Type", "Authorization"]);
+    let headers = [
+        ORIGIN,
+        ("access-control-request-method", "POST"),
+        (
+            "access-control-request-headers",
+            "authorization, content-type",
+        ),
+    ];
+    for (wiring, answer) in each(&policy, "OPTIONS", "/things", &headers).await {
+        assert_eq!(answer.status, StatusCode::OK, "{wiring}");
+        assert_eq!(
+            answer.header("access-control-allow-headers"),
+            Some("Content-Type, Authorization"),
+            "{wiring}"
+        );
+    }
 }
 
 #[test]

@@ -232,3 +232,82 @@ async fn head_is_not_allowed() {
         assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED, "{path}");
     }
 }
+
+// --- all-Rust Stage A P0.3: a page built into the binary, no npm -----------------------------
+
+fn two_way() -> serde_json::Value {
+    asyncapi::document(
+        "Order Service",
+        "1.0",
+        &[
+            Channel::publish_cdc::<UserRegistered>("user-events", "UserRegistered"),
+            Channel::subscribe::<OrderCancelled>("order-events", "OrderCancelled"),
+        ],
+    )
+}
+
+#[test]
+fn the_page_lists_every_channel_its_direction_and_payload() {
+    let page = asyncapi::page(&two_way());
+    for wanted in [
+        "<title>Order Service 1.0 — AsyncAPI</title>",
+        "user-events",
+        "publishes",
+        "order-events",
+        "consumes",
+        "UserRegistered",
+        "OrderCancelled",
+        "&quot;userId&quot;",
+    ] {
+        assert!(page.contains(wanted), "{wanted} missing from\n{page}");
+    }
+    assert!(!page.contains("<script"), "no script needed: {page}");
+}
+
+#[test]
+fn the_page_escapes_what_it_shows() {
+    let document = json!({"asyncapi": "3.0.0", "info": {"title": "<b>x</b>", "version": "1"},
+        "channels": {}, "operations": {}});
+    let page = asyncapi::page(&document);
+    assert!(page.contains("&lt;b&gt;x&lt;/b&gt;"), "{page}");
+    assert!(!page.contains("<b>x</b>"), "{page}");
+}
+
+#[test]
+fn a_service_without_events_publishes_and_consumes_nothing() {
+    let document = asyncapi::document("Cart Service", "1.0", &[]);
+    assert_eq!(document["channels"], json!({}));
+    assert_eq!(document["operations"], json!({}));
+    assert!(asyncapi::page(&document).contains("publishes and consumes nothing"));
+}
+
+#[tokio::test]
+async fn the_built_in_page_is_served_with_the_json() {
+    let app = asyncapi::router_with_page(&two_way());
+    let page = call(&app, "GET", "/docs/asyncapi/").await;
+    assert_eq!(page.status(), StatusCode::OK);
+    assert_eq!(
+        header(&page, "content-type").as_deref(),
+        Some("text/html; charset=utf-8")
+    );
+    assert!(
+        String::from_utf8(body(page).await)
+            .unwrap()
+            .contains("order-events")
+    );
+    let index = call(&app, "GET", "/docs/asyncapi/index.html").await;
+    assert_eq!(index.status(), StatusCode::OK);
+    let json = call(&app, "GET", "/docs/asyncapi.json").await;
+    assert_eq!(
+        header(&json, "content-type").as_deref(),
+        Some("application/json")
+    );
+    let served: serde_json::Value = serde_json::from_slice(&body(json).await).unwrap();
+    assert_eq!(served, two_way());
+    let redirect = call(&app, "GET", "/docs/asyncapi").await;
+    assert_eq!(redirect.status(), StatusCode::MOVED_PERMANENTLY);
+    assert_eq!(
+        call(&app, "GET", "/docs/asyncapi/nope.js").await.status(),
+        StatusCode::NOT_FOUND
+    );
+}
