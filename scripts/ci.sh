@@ -20,5 +20,5 @@ ci_clippy
 # harness runs it (user-service's probe group, notification-service's consumer
 # groups). Everything else in the crate is measured.
 ci_coverage 'kafka-client/src/stream\.rs'
-# shellcheck disable=SC2119 # no lockfile-only crates here
-ci_audit
+# sqlx's mysql and sqlite crates are in Cargo.lock only (.cargo/audit.toml).
+ci_audit rsa libsqlite3-sys
