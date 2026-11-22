@@ -9,6 +9,7 @@ pub mod edge;
 pub mod environment;
 pub mod health;
 pub mod jvm;
+pub mod outbox;
 pub mod postgres;
 pub mod runtime;
 pub mod shutdown;

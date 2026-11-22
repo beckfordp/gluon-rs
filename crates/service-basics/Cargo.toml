@@ -14,12 +14,16 @@ workspace = true
 
 [dependencies]
 axum = "0.8"
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres"] }
+serde = "1"
+serde_json = { version = "1", features = ["preserve_order"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "json", "uuid"] }
 thiserror = "2"
 time = "0.3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "sync", "time"] }
+uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
+serde = { version = "1", features = ["derive"] }
 service-testing = { path = "../service-testing" }
 time = { version = "0.3", features = ["macros"] }
 tower = { version = "0.5", features = ["util"] }
