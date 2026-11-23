@@ -1,0 +1,8 @@
+{
+  "track_id": "client-post_20261123",
+  "type": "feature",
+  "status": "in_progress",
+  "created_at": "2026-11-23T04:55:00Z",
+  "updated_at": "2026-11-23T04:55:00Z",
+  "description": "telemetry: a traced, resilient JSON POST (TracedClient::send, ResilientClient::post_json) for order-service's callees (all-Rust Stage A)."
+}
