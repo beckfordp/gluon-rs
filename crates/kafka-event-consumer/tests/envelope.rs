@@ -104,7 +104,12 @@ struct Run {
     lines: Vec<Value>,
 }
 
-async fn run(routes: &Fake, publisher: Published, key: Option<&str>, value: Option<&str>) -> Run {
+async fn run<R: Routes>(
+    routes: &R,
+    publisher: Published,
+    key: Option<&str>,
+    value: Option<&str>,
+) -> Run {
     let log: Arc<Mutex<Vec<u8>>> = Arc::default();
     let logger = Logger::to_writer("kafka-event-consumer", log.clone());
     let retry = RetryConfig {
@@ -329,4 +334,49 @@ async fn an_instant_with_a_fraction_or_an_offset_is_a_timestamp() {
             [("e1".to_owned(), "u1".to_owned())]
         );
     }
+}
+
+/// [`Fake`], decoding outside the guard: poison is logged and skipped.
+#[derive(Default)]
+struct Skipping(Fake);
+
+impl Routes for Skipping {
+    type Event = Welcome;
+    type Error = FakeError;
+    const DEAD_LETTERS_POISON: bool = false;
+
+    fn decode(&self, envelope: &Envelope) -> Option<Result<Welcome, FakeError>> {
+        self.0.decode(envelope)
+    }
+
+    async fn handle(&self, event_id: &str, event: &Welcome) -> Result<(), FakeError> {
+        self.0.handle(event_id, event).await
+    }
+}
+
+#[tokio::test]
+async fn routes_that_skip_poison_log_it_and_dead_letter_nothing() {
+    let payload = envelope("UserRegistered", &json!({"email": "no user id"}));
+    for (raw, message) in [
+        ("{nope", "Failed to decode user-events envelope"),
+        (payload.as_str(), "Failed to decode UserRegistered payload"),
+    ] {
+        let routes = Skipping::default();
+        let run = run(&routes, Published::default(), Some("k1"), Some(raw)).await;
+        assert!(run.result.is_ok(), "{:?}", run.result);
+        assert_eq!(run.letters, []);
+        assert_eq!(messages(&run.lines), [message]);
+        assert_eq!(run.lines[0]["level"], "ERROR");
+    }
+    let routes = Skipping(Fake {
+        failing: true,
+        ..Fake::default()
+    });
+    let value = envelope("UserRegistered", &json!({"userId": "u1"}));
+    let run = run(&routes, Published::default(), Some("u1"), Some(&value)).await;
+    assert_eq!(
+        run.letters.len(),
+        1,
+        "a failing handler is still dead-lettered"
+    );
 }

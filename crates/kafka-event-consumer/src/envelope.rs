@@ -46,6 +46,12 @@ pub trait Routes: Sync {
     /// that failed. Logged and dead-lettered; never the stream's error.
     type Error: std::error::Error + Send + Sync + 'static;
 
+    /// Whether a record that doesn't decode (envelope or payload) is retried
+    /// and dead-lettered (purekafka's `EnvelopeHandler`), or logged and
+    /// skipped (consumers that decode outside the guard: order-service's).
+    /// A failing handler is dead-lettered either way.
+    const DEAD_LETTERS_POISON: bool = true;
+
     /// `None` when the envelope's type has no route (skipped); `Some(Err)`
     /// when it has one but the payload doesn't decode (poison).
     fn decode(&self, envelope: &Envelope) -> Option<Result<Self::Event, Self::Error>>;
@@ -87,7 +93,7 @@ pub async fn handle_record<R: Routes, P: Publish + Sync>(
                 &[("topic", topic), ("bytes", &bytes), ("error", &error)],
                 &format!("Failed to decode {topic} envelope"),
             );
-            return poison(topic, key, raw, dead_letter, &error).await;
+            return poison::<R, P>(topic, key, raw, dead_letter, &error).await;
         }
     };
     match routes.decode(&envelope) {
@@ -108,7 +114,7 @@ pub async fn handle_record<R: Routes, P: Publish + Sync>(
                 ],
                 &format!("Failed to decode {} payload", envelope.event_type),
             );
-            poison(topic, key, raw, dead_letter, &error).await
+            poison::<R, P>(topic, key, raw, dead_letter, &error).await
         }
         Some(Ok(event)) => {
             dead_letter
@@ -122,14 +128,17 @@ pub async fn handle_record<R: Routes, P: Publish + Sync>(
 
 /// A record no retry will fix still goes through the guard, so it is retried
 /// and dead-lettered as any failure is (`DeadLetter.guard` around the
-/// decode in `EnvelopeHandler`).
-async fn poison<P: Publish + Sync>(
+/// decode in `EnvelopeHandler`), unless the routes skip it.
+async fn poison<R: Routes, P: Publish + Sync>(
     topic: &str,
     key: Option<&str>,
     raw: &str,
     dead_letter: &DeadLetter<P>,
     error: &str,
 ) -> Result<(), DeadLetterError> {
+    if !R::DEAD_LETTERS_POISON {
+        return Ok(());
+    }
     dead_letter
         .guard(topic, key, raw, || std::future::ready(Err::<(), _>(error)))
         .await
