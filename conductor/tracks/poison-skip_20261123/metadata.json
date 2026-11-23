@@ -1,0 +1,8 @@
+{
+  "track_id": "poison-skip_20261123",
+  "type": "feature",
+  "status": "in_progress",
+  "created_at": "2026-11-23T05:20:00Z",
+  "updated_at": "2026-11-23T05:20:00Z",
+  "description": "kafka-event-consumer: routes may skip undecodable records instead of dead-lettering them (Routes::DEAD_LETTERS_POISON), for order-service (all-Rust Stage A)."
+}
