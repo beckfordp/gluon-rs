@@ -11,7 +11,8 @@ use opentelemetry::propagation::{Injector, TextMapPropagator};
 use opentelemetry::trace::{SpanKind, Status, TraceContextExt, Tracer};
 use opentelemetry::{Context, KeyValue};
 use opentelemetry_sdk::propagation::TraceContextPropagator;
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use reqwest::Method;
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
 
 use crate::metrics::{Histogram, LATENCY_BUCKETS, Metrics};
 use crate::resilience::{CircuitBreaker, CircuitBreakerConfig, Retry, RetryConfig};
@@ -85,6 +86,21 @@ impl TracedClient {
     /// # Errors
     /// Transport failures (connection, timeout, reset).
     pub async fn get(&self, url: &str) -> Result<reqwest::Response, reqwest::Error> {
+        self.send(Method::GET, url, None).await
+    }
+
+    /// `<method> url`, with `body` as JSON when given: a CLIENT span `<METHOD> <host>` if a
+    /// span is active, the duration always.
+    ///
+    /// # Errors
+    /// Transport failures (connection, timeout, reset).
+    pub async fn send(
+        &self,
+        method: Method,
+        url: &str,
+        body: Option<&serde_json::Value>,
+    ) -> Result<reqwest::Response, reqwest::Error> {
+        let name = method.as_str().to_owned();
         let parsed = reqwest::Url::parse(url).ok();
         let host = parsed
             .as_ref()
@@ -99,10 +115,10 @@ impl TracedClient {
         let cx = if traced {
             let span = self
                 .tracer
-                .span_builder(format!("GET {host}").trim().to_owned())
+                .span_builder(format!("{name} {host}").trim().to_owned())
                 .with_kind(SpanKind::Client)
                 .with_attributes([
-                    KeyValue::new("http.request.method", "GET"),
+                    KeyValue::new("http.request.method", name.clone()),
                     KeyValue::new("server.address", host.clone()),
                     KeyValue::new("url.path", path),
                 ])
@@ -115,8 +131,13 @@ impl TracedClient {
         if let Some(cx) = &cx {
             TraceContextPropagator::new().inject_context(cx, &mut HeaderInjector(&mut headers));
         }
+        let mut request = self.http.request(method, url);
+        if let Some(body) = body {
+            headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+            request = request.body(body.to_string());
+        }
         let start = Instant::now();
-        let result = self.http.get(url).headers(headers).send().await;
+        let result = request.headers(headers).send().await;
         let elapsed = start.elapsed().as_secs_f64();
         match &result {
             Ok(response) => {
@@ -125,7 +146,7 @@ impl TracedClient {
                 self.duration.record(
                     elapsed,
                     &[
-                        ("http.request.method", "GET"),
+                        ("http.request.method", &name),
                         ("server.address", &host),
                         ("http.response.status_code", &code),
                     ],
@@ -144,7 +165,7 @@ impl TracedClient {
                 self.duration.record(
                     elapsed,
                     &[
-                        ("http.request.method", "GET"),
+                        ("http.request.method", &name),
                         ("server.address", &host),
                         ("error.type", error_type(error)),
                     ],
@@ -187,11 +208,16 @@ impl ResilientClient {
         }
     }
 
-    async fn attempt(&self, url: &str) -> Result<reqwest::Response, ClientError> {
+    async fn attempt(
+        &self,
+        method: &Method,
+        url: &str,
+        body: Option<&serde_json::Value>,
+    ) -> Result<reqwest::Response, ClientError> {
         if !self.breaker.acquire() {
             return Err(ClientError::Open);
         }
-        let result = self.client.get(url).await;
+        let result = self.client.send(method.clone(), url, body).await;
         self.breaker
             .record(matches!(&result, Ok(response) if !response.status().is_server_error()));
         Ok(result?)
@@ -203,9 +229,34 @@ impl ResilientClient {
     /// [`ClientError::Open`] when rejected, [`ClientError::Transport`] when the
     /// last attempt failed on the way.
     pub async fn get(&self, url: &str) -> Result<reqwest::Response, ClientError> {
+        self.send(Method::GET, url, None).await
+    }
+
+    /// `POST url` with `body` as JSON, resiliently, as [`Self::get`].
+    ///
+    /// # Errors
+    /// As [`Self::get`].
+    pub async fn post_json(
+        &self,
+        url: &str,
+        body: &serde_json::Value,
+    ) -> Result<reqwest::Response, ClientError> {
+        self.send(Method::POST, url, Some(body)).await
+    }
+
+    /// `<method> url`, with `body` as JSON when given, resiliently, as [`Self::get`].
+    ///
+    /// # Errors
+    /// As [`Self::get`].
+    pub async fn send(
+        &self,
+        method: Method,
+        url: &str,
+        body: Option<&serde_json::Value>,
+    ) -> Result<reqwest::Response, ClientError> {
         self.retry
             .run(
-                || self.attempt(url),
+                || self.attempt(&method, url, body),
                 |result| match result {
                     Ok(response) => response.status().is_server_error(),
                     Err(ClientError::Transport(error)) => error.is_connect() || error.is_timeout(),

@@ -440,3 +440,69 @@ async fn an_open_breaker_fails_fast_without_calling_and_is_not_retried() {
         "purerest_circuit_breaker_calls_rejected_total{otel_scope_name=\"events-probe\"} 1.0"
     ));
 }
+
+#[tokio::test]
+async fn a_json_post_is_sent_traced_and_retried_as_a_get() {
+    let exporter = InMemorySpanExporter::default();
+    let tracing = Tracing::with_exporter("events-probe", 1.0, exporter.clone());
+    let metrics = Metrics::new("events-probe");
+    let client = ResilientClient::new(
+        TracedClient::new(Duration::from_secs(5), tracing.tracer(), &metrics).unwrap(),
+        RetryConfig {
+            max_retries: 3,
+            base_delay: Duration::from_millis(5),
+        },
+        CircuitBreakerConfig {
+            failure_threshold: 10,
+            reset_timeout: Duration::from_secs(60),
+        },
+        &metrics,
+    );
+    let (url, seen) = server(vec![Answer::Status(503)]).await;
+    let parent = tracing.tracer().start("checkout");
+    let cx = Context::current_with_span(parent);
+    let body = serde_json::json!({"orderId": "o1", "amountCents": 100});
+    let response = client
+        .post_json(&format!("{url}/payments/authorize"), &body)
+        .with_context(cx.clone())
+        .await
+        .unwrap();
+    assert_eq!(response.status().as_u16(), 200);
+    cx.span().end();
+    let requests = seen.lock().unwrap().clone();
+    assert_eq!(requests.len(), 2);
+    let last = requests[1].to_ascii_lowercase();
+    assert!(last.starts_with("post /payments/authorize "), "{last}");
+    assert!(last.contains("content-type: application/json"), "{last}");
+    assert!(
+        last.ends_with("{\"amountcents\":100,\"orderid\":\"o1\"}")
+            || last.ends_with("{\"orderid\":\"o1\",\"amountcents\":100}"),
+        "{last}"
+    );
+    tracing.force_flush();
+    let names: Vec<_> = exporter
+        .get_finished_spans()
+        .unwrap()
+        .into_iter()
+        .filter(|s| s.span_kind == SpanKind::Client)
+        .map(|s| s.name.to_string())
+        .collect();
+    assert_eq!(names, ["POST 127.0.0.1", "POST 127.0.0.1"]);
+    assert!(metrics.render().contains(
+        "http_client_request_duration_seconds_count{http_request_method=\"POST\",http_response_status_code=\"200\",otel_scope_name=\"events-probe\",server_address=\"127.0.0.1\"} 1"
+    ));
+}
+
+#[tokio::test]
+async fn a_post_without_a_body_sends_none() {
+    let (_, client) = resilient(1000, 0, 10);
+    let (url, seen) = server(vec![Answer::Status(204)]).await;
+    let response = client
+        .send(reqwest::Method::POST, &format!("{url}/r/o1/release"), None)
+        .await
+        .unwrap();
+    assert_eq!(response.status().as_u16(), 204);
+    let first = seen.lock().unwrap()[0].to_ascii_lowercase();
+    assert!(first.starts_with("post /r/o1/release "), "{first}");
+    assert!(!first.contains("content-type"), "{first}");
+}
